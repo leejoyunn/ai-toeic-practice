@@ -1,5 +1,6 @@
 import vinext from "vinext";
 import { defineConfig } from "vite";
+import path from "node:path";
 import hostingConfig from "./.openai/hosting.json";
 import { sites } from "./build/sites-vite-plugin";
 
@@ -10,6 +11,14 @@ const { d1, r2 } = hostingConfig;
 
 // macOS Seatbelt blocks FSEvents, so Codex previews need polling for HMR.
 const isCodexSeatbeltSandbox = process.env.CODEX_SANDBOX === "seatbelt";
+
+const rscDependencyExcludes = [
+  "lucide-react",
+  // Vinext rewrites the Lucide barrel to deep ESM imports. Icon.mjs is the
+  // actual `use client` boundary reported by @vitejs/plugin-rsc.
+  "lucide-react/dist/esm/Icon.mjs",
+  path.resolve("node_modules/lucide-react/dist/esm/Icon.mjs").replaceAll("\\", "/"),
+];
 
 const localBindingConfig = {
   main: "./worker/index.ts",
@@ -44,6 +53,28 @@ export default defineConfig(async () => {
   const { cloudflare } = await import("@cloudflare/vite-plugin");
 
   return {
+    // RSC and SSR have independent module graphs in Vinext. Client component
+    // dependencies must not be inconsistently pre-bundled in either graph.
+    environments: {
+      rsc: {
+        optimizeDeps: {
+          exclude: rscDependencyExcludes,
+        },
+      },
+      ssr: {
+        optimizeDeps: {
+          exclude: rscDependencyExcludes,
+        },
+      },
+      client: {
+        // @vitejs/plugin-rsc builds its client-reference metadata from the
+        // client optimizer. Excluding the actual Lucide boundary here is what
+        // prevents the RSC/client optimization mismatch warning.
+        optimizeDeps: {
+          exclude: rscDependencyExcludes,
+        },
+      },
+    },
     server: isCodexSeatbeltSandbox
       ? { watch: { useFsEvents: false, usePolling: true } }
       : undefined,
