@@ -50,6 +50,15 @@ GEMINI_MODEL=
 4. 到 Authentication → URL Configuration：Site URL 設成本機或正式網址；Redirect URLs 加入 `http://localhost:3000/auth/callback`（若開發伺服器使用不同 port，請同步修改）。
 5. SQL 已啟用 RLS；使用者資料表只允許目前登入者讀寫。共用圖片與單字只允許登入者讀取。
 
+### 初次 migration 曾中途失敗
+
+如果舊版 initial migration 曾執行到一半才報錯，請依序在 SQL Editor 執行：
+
+1. `supabase/migrations/202608150000_cleanup_partial_schema.sql`
+2. `supabase/migrations/202608150001_initial_schema.sql`
+
+Cleanup 只會移除本專案明確命名的 `public` tables、types、function，以及本專案加在 `auth.users` 上的 `on_auth_user_created` trigger；不會刪除 `auth`、`storage`、Supabase 系統 schema、使用者帳號或 `pgcrypto` extension。修正版 initial migration 使用 transaction，未來若任一步驟失敗會整批回滾，避免再次留下半套 schema。
+
 ## Google OAuth 設定
 
 1. 到 Google Cloud Console 建立 OAuth 2.0 Client（Web application）。

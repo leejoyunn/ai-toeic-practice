@@ -1,4 +1,7 @@
 -- AI TOEIC Practice System: complete forward-compatible schema for Phases 1-8.
+-- Run 202608150000_cleanup_partial_schema.sql first if an earlier attempt failed partway.
+begin;
+
 create extension if not exists pgcrypto;
 
 create type public.question_difficulty as enum ('easy','medium','hard');
@@ -63,8 +66,9 @@ create table public.skill_mastery (
 create table public.vocabulary_items (
   id uuid primary key default gen_random_uuid(), word text not null, chinese_meaning text not null, part_of_speech text not null,
   simple_example text, example_translation text, common_collocations text[] not null default '{}', toeic_context text,
-  created_at timestamptz not null default now(), unique(lower(word),part_of_speech)
+  created_at timestamptz not null default now()
 );
+create unique index vocabulary_items_word_pos_unique on public.vocabulary_items (lower(word), part_of_speech);
 create table public.user_vocabulary (
   user_id uuid references public.profiles(id) on delete cascade, vocabulary_id uuid references public.vocabulary_items(id) on delete cascade,
   source text not null, familiarity public.mastery_level not null default 'learning', seen_count integer not null default 0, correct_count integer not null default 0,
@@ -106,6 +110,7 @@ alter table public.practice_sessions enable row level security; alter table publ
 alter table public.wrong_answers enable row level security; alter table public.skill_mastery enable row level security; alter table public.user_vocabulary enable row level security;
 alter table public.vocabulary_reviews enable row level security; alter table public.study_stats enable row level security; alter table public.mock_tests enable row level security;
 alter table public.mock_test_answers enable row level security; alter table public.daily_recommendations enable row level security;
+alter table public.part1_images enable row level security; alter table public.vocabulary_items enable row level security;
 
 create policy "profiles own rows" on public.profiles for all using(auth.uid()=id) with check(auth.uid()=id);
 create policy "settings own rows" on public.user_settings for all using(auth.uid()=user_id) with check(auth.uid()=user_id);
@@ -123,3 +128,5 @@ create policy "mock answers through owner" on public.mock_test_answers for all u
 create policy "recommendations own rows" on public.daily_recommendations for all using(auth.uid()=user_id) with check(auth.uid()=user_id);
 create policy "authenticated images read" on public.part1_images for select to authenticated using(is_active);
 create policy "authenticated vocabulary read" on public.vocabulary_items for select to authenticated using(true);
+
+commit;
