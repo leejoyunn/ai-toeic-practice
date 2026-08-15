@@ -1,2 +1,6 @@
-import { AppShell } from "@/components/layout/app-shell";import { getCurrentUser } from "@/lib/supabase/auth";import Link from "next/link";
-export default async function Page(){const user=await getCurrentUser();return <AppShell user={user} active="practice"><main className="placeholder-page"><section className="placeholder-card"><p className="eyebrow">PHASE 2</p><h1>練習功能即將加入</h1><p>Phase 1 已先完成可擴充入口。下一階段會優先實作 Reading Part 5–7 與 AI 出題。</p><Link className="button" href="/">返回首頁</Link></section></main></AppShell>}
+import Link from "next/link";
+import { BookOpen, Headphones, Sparkles } from "lucide-react";
+import { AppShell } from "@/components/layout/app-shell";
+import { getCurrentUser } from "@/lib/supabase/auth";
+
+export default async function PracticePage(){const user=await getCurrentUser();return <AppShell user={user} active="practice"><main className="page-content"><header className="practice-header"><p className="eyebrow">PRACTICE</p><h1>今天想練哪一種？</h1><p className="muted">聽力與閱讀完全分開；在外面也可以只做 Reading。</p></header><div className="mode-grid"><section className="mode-panel ready"><BookOpen/><span className="status-chip">Phase 2 已開放</span><h2>閱讀練習</h2><p>選擇 Part 5、6 或 7，由 AI 即時生成全新題目。</p><div className="part-links">{[5,6,7].map((part)=><Link key={part} href={`/practice/part-${part}`} className="button">Part {part}</Link>)}</div></section><section className="mode-panel"><Headphones/><span className="status-chip muted-chip">Phase 3</span><h2>聽力練習</h2><p>Part 1–4 與瀏覽器語音會在下一階段實作。</p><span className="button disabled-button">尚未開放</span></section><section className="mode-panel wide"><Sparkles/><span><h2>400 → 550 難度策略</h2><p>不會把所有題目直接設成 550 分。系統會參考目前程度、近期正確率與弱項，逐步調整句子長度、線索與干擾選項。</p></span></section></div></main></AppShell>}

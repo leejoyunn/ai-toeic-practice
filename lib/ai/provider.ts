@@ -1,7 +1,43 @@
-import type { ToeicQuestion } from "@/types/toeic";
+import type { GeneratedQuestion } from "@/lib/ai/schema";
+import type { Difficulty, ReadingPart } from "@/types/toeic";
 
-export interface GenerateQuestionsInput { userId:string; part:1|2|3|4|5|6|7; count:number; targetScore:number; currentEstimatedLevel:number; difficulty:"easy"|"medium"|"hard"; weakSkills:string[]; recentScenarios:string[]; }
-export interface AiProvider { readonly name:string; generateQuestions(input:GenerateQuestionsInput):Promise<ToeicQuestion[]>; }
-export class AiProviderUnavailableError extends Error { constructor(){ super("目前無法產生新題目，請稍後再試。"); this.name="AiProviderUnavailableError"; } }
-// TODO Phase 2: implement a free-tier provider on the server, validate with Zod,
-// retry malformed output, and persist accepted batches before returning them.
+export interface GenerateQuestionsInput {
+  part: ReadingPart;
+  count: number;
+  targetScore: number;
+  currentEstimatedLevel: number;
+  difficulty: Difficulty;
+  weakSkills: string[];
+  recentScenarios: string[];
+  recentVocabularyDomains: string[];
+  recentSentencePatterns: string[];
+}
+
+export interface AiProvider {
+  readonly name: string;
+  generateQuestions(input: GenerateQuestionsInput): Promise<GeneratedQuestion[]>;
+}
+
+export class AiProviderUnavailableError extends Error {
+  constructor(message = "目前無法產生新題目，請稍後再試。") {
+    super(message);
+    this.name = "AiProviderUnavailableError";
+  }
+}
+
+export function getAiProvider(): AiProvider {
+  const provider = (process.env.AI_PROVIDER ?? "gemini").toLowerCase();
+  if (provider === "gemini") {
+    // Kept dynamic so adding another provider never bundles its server code into the client.
+    return new GeminiProviderProxy();
+  }
+  throw new AiProviderUnavailableError(`尚未支援 AI Provider：${provider}`);
+}
+
+class GeminiProviderProxy implements AiProvider {
+  readonly name = "gemini";
+  async generateQuestions(input: GenerateQuestionsInput) {
+    const { GeminiProvider } = await import("./providers/gemini");
+    return new GeminiProvider().generateQuestions(input);
+  }
+}

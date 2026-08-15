@@ -1,6 +1,6 @@
 # TOEIC Path — AI 多益英文練習系統
 
-為 TOEIC 約 400 分、第一階段目標 550 分的學習者設計。Phase 1 已完成 Mobile First 首頁、導覽、Supabase／Google OAuth 串接骨架、個人資料入口、PWA 基礎設定、完整未來資料模型與 AI Provider 介面。
+為 TOEIC 約 400 分、第一階段目標 550 分的學習者設計。Phase 1 已完成 Mobile First 首頁、導覽、Supabase／Google OAuth 與 PWA 基礎；Phase 2 已完成 AI 即時生成 Reading Part 5–7、作答與白話詳解。
 
 ## 技術架構
 
@@ -28,9 +28,19 @@ NEXT_PUBLIC_SUPABASE_URL=
 NEXT_PUBLIC_SUPABASE_ANON_KEY=
 AI_PROVIDER=
 AI_API_KEY=
+GEMINI_API_KEY=
+GEMINI_MODEL=
 ```
 
-Phase 1 只需前兩項。`NEXT_PUBLIC_*` 僅能放 Supabase 公開 URL 與 anon key；不得放 service role key。AI 兩項保留給 Phase 2，且只允許 Server 讀取。
+`NEXT_PUBLIC_*` 僅能放 Supabase 公開 URL 與 anon key；不得放 service role key。Phase 2 建議設定 `AI_PROVIDER=gemini`、`GEMINI_API_KEY`，模型可用 `GEMINI_MODEL=gemini-2.5-flash-lite`。`AI_API_KEY` 是其他 Provider 的通用保留欄位。所有 AI Key 只允許 Server 讀取。
+
+## Gemini 免費 Provider
+
+1. 登入 [Google AI Studio](https://aistudio.google.com/)。
+2. 到 API Keys 頁建立新的 Gemini API Key；新帳號可使用具有限額的 Free Tier。
+3. 將 Key 填入本機 `.env.local` 的 `GEMINI_API_KEY`，不要加上 `NEXT_PUBLIC_`。
+4. 設定 `AI_PROVIDER=gemini` 與 `GEMINI_MODEL=gemini-2.5-flash-lite`。
+5. 免費額度與可用模型可能調整，請以 AI Studio 的 Usage／Rate limits 為準。
 
 ## Supabase 設定
 
@@ -54,12 +64,16 @@ Phase 1 只需前兩項。`NEXT_PUBLIC_*` 僅能放 Supabase 公開 URL 與 anon
 - 手機寬度：底部導覽可點；桌面寬度：左側導覽可點。
 - `/login`：未設環境變數時顯示友善提示；完成設定後可用 Google 登入。
 - `/profile`：登入後顯示帳號與學習階段，另一裝置登入同帳號可辨識同一 `user_id`。
-- `/practice`、`/practice/reading`、`/practice/listening`：顯示後續階段說明，不會誤呼叫 AI。
+- `/practice`：選擇 Reading Part 5、6、7。
+- `/practice/part-5`：生成句子填空並逐題作答。
+- `/practice/part-6`：確認每題包含完整短文與上下文題。
+- `/practice/part-7`：確認每題包含原創文章與閱讀理解題。
+- 作答後確認一定顯示正確答案、中文解析、單字、考點與完整翻譯。
 - 瀏覽器 Application 面板：可讀取 PWA manifest，display 為 standalone。
 
 ## 後續階段
 
-- Phase 2：Reading Part 5–7、AI 生成 API、Zod 驗證、解析、難度與基礎技能策略。
+- Phase 2（已完成）：Reading Part 5–7、AI 生成 API、Zod 驗證、作答詳解、基礎防重複與 400→550 難度策略。
 - Phase 3：Listening Part 1–4、Web Speech API、多 voice 與逐字稿。
 - Phase 4：question hash、相似度、最近 500 題冷卻、情境與考點輪替。
 - Phase 5–7：錯題與 mastery、統計推薦及單字、Mini／Full Mock Test。

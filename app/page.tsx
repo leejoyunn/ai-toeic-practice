@@ -28,7 +28,7 @@ export default async function Home() {
             <span className="pill"><Target size={15}/> 400 → 550 基礎補強</span>
             <h2>今天，先把基礎打穩。</h2>
             <p>根據你的學習階段，建議從基礎文法與應答開始。完成後再練 10 個高頻單字。</p>
-            <Link className="button button-light" href="/practice/recommended">開始今日練習 <ChevronRight size={18}/></Link>
+            <Link className="button button-light" href="/practice">開始今日練習 <ChevronRight size={18}/></Link>
           </div>
           <div className="score-orbit" aria-label="目前程度約 400 分，目標 550 分">
             <div className="orbit-ring"><strong>400</strong><span>目前程度</span></div>
@@ -46,7 +46,7 @@ export default async function Home() {
           <div className="section-heading"><div><p className="eyebrow">YOUR PLAN</p><h2>今日建議</h2></div><span>約 25 分鐘</span></div>
           <div className="task-list">
             {tasks.map(({ label, detail, icon: Icon, tone }) => (
-              <Link href="/practice/recommended" className="task-card" key={label}>
+              <Link href="/practice" className="task-card" key={label}>
                 <span className={`task-icon ${tone}`}><Icon size={21}/></span><span><strong>{label}</strong><small>{detail}</small></span><ChevronRight size={19}/>
               </Link>
             ))}
@@ -56,8 +56,8 @@ export default async function Home() {
         <section className="section-block">
           <div className="section-heading"><div><p className="eyebrow">QUICK START</p><h2>選擇練習方式</h2></div></div>
           <div className="practice-grid">
-            <Link href="/practice/listening" className="practice-card listening"><Headphones/><span><strong>聽力練習</strong><small>Part 1–4 · 需要聲音</small></span><ChevronRight/></Link>
-            <Link href="/practice/reading" className="practice-card reading"><BookOpen/><span><strong>閱讀練習</strong><small>Part 5–7 · 安靜也能做</small></span><ChevronRight/></Link>
+            <Link href="/practice" className="practice-card listening"><Headphones/><span><strong>聽力練習</strong><small>Part 1–4 · 需要聲音</small></span><ChevronRight/></Link>
+            <Link href="/practice" className="practice-card reading"><BookOpen/><span><strong>閱讀練習</strong><small>Part 5–7 · 安靜也能做</small></span><ChevronRight/></Link>
           </div>
         </section>
       </main>
