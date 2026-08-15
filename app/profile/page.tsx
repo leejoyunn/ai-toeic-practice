@@ -1,0 +1,4 @@
+import Link from "next/link";
+import { AppShell } from "@/components/layout/app-shell";
+import { getCurrentUser } from "@/lib/supabase/auth";
+export default async function ProfilePage(){const user=await getCurrentUser();return <AppShell active="profile" user={user}><main className="page-content"><section className="placeholder-card" style={{margin:"40px auto"}}><span className="avatar" style={{margin:"0 auto 18px"}}>{user?.name?.[0]??"你"}</span><h1>{user?.name??"個人學習檔案"}</h1><p>{user?"你的帳號已可跨裝置同步。":"登入後可同步學習紀錄、錯題、目標分數與設定。"}</p><div className="profile-grid"><div className="field"><span>目前程度</span><strong>約 400 分（使用者設定）</strong></div><div className="field"><span>第一階段目標</span><strong>550 分</strong></div><div className="field"><span>學習路線</span><strong>400 → 550 基礎補強</strong></div></div><Link className="button google-button" href={user?"/auth/signout":"/login"}>{user?"登出":"使用 Google 登入"}</Link></section></main></AppShell>}

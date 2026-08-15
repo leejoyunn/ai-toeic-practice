@@ -1,0 +1,2 @@
+import { AppShell } from "@/components/layout/app-shell";import { getCurrentUser } from "@/lib/supabase/auth";import Link from "next/link";
+export default async function Page(){const user=await getCurrentUser();return <AppShell user={user} active="practice"><main className="placeholder-page"><section className="placeholder-card"><p className="eyebrow">PHASE 2</p><h1>練習功能即將加入</h1><p>Phase 1 已先完成可擴充入口。下一階段會優先實作 Reading Part 5–7 與 AI 出題。</p><Link className="button" href="/">返回首頁</Link></section></main></AppShell>}

@@ -1,0 +1,11 @@
+{
+  "name": "TOEIC Path 多益練習",
+  "short_name": "TOEIC Path",
+  "description": "400 到 550 分漸進式多益英文練習系統",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f5f3ec",
+  "theme_color": "#173f3a",
+  "lang": "zh-Hant",
+  "icons": [{ "src": "/favicon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }]
+}
