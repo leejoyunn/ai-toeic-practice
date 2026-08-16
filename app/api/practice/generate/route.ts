@@ -29,7 +29,7 @@ export async function POST(request:Request) {
     const existingHashes = new Set(recentQuestions.map((question)=>question.question_hash));
 
     for (let generationRound=0; generationRound<2 && accepted.length<input.count; generationRound+=1) {
-      const generated = await provider.generateQuestions({part:input.part,count:Math.min(10,input.count-accepted.length+2),targetScore,currentEstimatedLevel,difficulty:strategy.difficulty,
+      const generated = await provider.generateQuestions({part:input.part,count:input.part>=6?input.count:Math.min(10,input.count-accepted.length+2),targetScore,currentEstimatedLevel,difficulty:strategy.difficulty,passageMode:input.passageMode,
         weakSkills:mastery?.map((item)=>item.skill_id)??strategy.focus,recentScenarios:[...new Set([...recentQuestions.map((q)=>q.scenario),...accepted.map((q)=>q.scenario)])].slice(0,12),
         recentVocabularyDomains:[...new Set(recentQuestions.map((q)=>q.vocabulary_domain))].slice(0,10),recentSentencePatterns:[...new Set(recentQuestions.map((q)=>q.sentence_pattern))].slice(0,10)});
       const hashed = await Promise.all(generated.map(async(question)=>({question,questionHash:await createQuestionHash(question)})));
@@ -38,10 +38,12 @@ export async function POST(request:Request) {
       for (const {question,questionHash} of hashed) {
         if (accepted.length>=input.count) break;
         if (existingHashes.has(questionHash)) continue;
-        if (isQuestionTooSimilar(question,[...recentQuestions,...accepted],accepted.length?SIMILARITY_CONFIG.batchThreshold:SIMILARITY_CONFIG.recentThreshold)) continue;
-        if (accepted.some((item)=>item.scenario===question.scenario&&item.sentencePattern===question.sentencePattern)) continue;
+        const comparisonPool=[...recentQuestions,...accepted].filter((item)=>!("passageGroupId" in item&&item.passageGroupId===question.passageGroupId));
+        if (isQuestionTooSimilar(question,comparisonPool,accepted.length?SIMILARITY_CONFIG.batchThreshold:SIMILARITY_CONFIG.recentThreshold)) continue;
+        const sameGroup=accepted.some((item)=>item.passageGroupId===question.passageGroupId);
+        if (!sameGroup&&accepted.some((item)=>item.scenario===question.scenario&&item.sentencePattern===question.sentencePattern)) continue;
         const previous=accepted.at(-1);
-        if(previous && (previous.scenario===question.scenario || previous.vocabulary[0]?.word.toLowerCase()===question.vocabulary[0]?.word.toLowerCase())) continue;
+        if(previous && previous.passageGroupId!==question.passageGroupId && (previous.scenario===question.scenario || previous.vocabulary[0]?.word.toLowerCase()===question.vocabulary[0]?.word.toLowerCase())) continue;
         existingHashes.add(questionHash); accepted.push({...question,questionHash});
       }
     }

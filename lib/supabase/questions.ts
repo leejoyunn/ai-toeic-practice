@@ -6,7 +6,7 @@ export interface StoredQuestionRow {
   id:string; user_id:string; part:number; question_type:string; question:string; options:GeneratedQuestion["options"];
   correct_answer:string; explanation:string; translation:string; vocabulary:GeneratedQuestion["vocabulary"]; grammar_point:string;
   difficulty:Difficulty; target_score:number; topic:string; scenario:string; keywords:string[]; vocabulary_domain:string;
-  sentence_pattern:string; passage:string|null; passage_type:string|null; question_hash:string; created_at:string;
+  sentence_pattern:string; passage:string|null; passage_type:string|null; question_hash:string; generation_metadata:Record<string,unknown>; created_at:string;
 }
 
 export async function getRecentQuestions(supabase: SupabaseClient, userId: string, part: ReadingPart, limit: number) {
@@ -20,13 +20,16 @@ export async function saveGeneratedQuestions(supabase: SupabaseClient, userId:st
     options:question.options, correct_answer:question.correctAnswer, explanation:question.explanation, translation:question.translation, vocabulary:question.vocabulary,
     grammar_point:question.grammarPoint, difficulty:question.difficulty, target_score:question.targetScore, topic:question.topic, scenario:question.scenario,
     keywords:question.keywords, vocabulary_domain:question.vocabularyDomain, sentence_pattern:question.sentencePattern, passage:question.passage,
-    passage_type:question.passageType, question_hash:question.questionHash, provider, generation_metadata:{phase:2,validated:true} }));
+    passage_type:question.passageType, question_hash:question.questionHash, provider, generation_metadata:{phase:2,validated:true,passageGroupId:question.passageGroupId,blankNumber:question.blankNumber,documents:question.documents} }));
   const { data, error } = await supabase.from("questions").insert(rows).select("*");
   if (error) throw new Error(`儲存題目失敗：${error.message}`);
   return (data ?? []) as StoredQuestionRow[];
 }
 
 export function toPublicQuestion(row:StoredQuestionRow) {
+  const metadata=row.generation_metadata??{};
   return { id:row.id, part:row.part, questionType:row.question_type, question:row.question, options:row.options, difficulty:row.difficulty,
-    targetScore:row.target_score, topic:row.topic, scenario:row.scenario, grammarPoint:row.grammar_point, passage:row.passage, passageType:row.passage_type };
+    targetScore:row.target_score, topic:row.topic, scenario:row.scenario, grammarPoint:row.grammar_point, passage:row.passage, passageType:row.passage_type,
+    passageGroupId:typeof metadata.passageGroupId==="string"?metadata.passageGroupId:null,blankNumber:typeof metadata.blankNumber==="number"?metadata.blankNumber:null,
+    documents:Array.isArray(metadata.documents)?metadata.documents:[] };
 }

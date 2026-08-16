@@ -15,6 +15,6 @@ export function recommendDifficulty(context: DifficultyContext): DifficultyRecom
 
 export function partGuidance(part: ReadingPart) {
   if (part === 5) return "每題為單一句子四選一，優先考詞性、基本時態、主被動、介系詞、連接詞。";
-  if (part === 6) return "每題必須有一篇完整短文，考單字、文法、句子插入或上下文；不要只給單一句子。";
-  return "每題必須有完整原創文章，可用 Email、Notice、Advertisement、Message、Schedule 等，考明確資訊、同義改寫或簡單推論。";
+  if (part === 6) return "同一文章群組要對應多個編號空格與多題，共用完整短文；混合單字、文法、句子插入與上下文題型。";
+  return "同一文章群組要對應多題，支援真正相關的 Single、Double、Triple Passage 文件；混合細節、主旨、同義改寫、推論、文意字彙與跨文件資訊。";
 }

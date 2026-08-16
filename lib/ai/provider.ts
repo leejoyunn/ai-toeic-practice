@@ -11,6 +11,7 @@ export interface GenerateQuestionsInput {
   recentScenarios: string[];
   recentVocabularyDomains: string[];
   recentSentencePatterns: string[];
+  passageMode?: "single" | "double" | "triple";
 }
 
 export interface AiProvider {
