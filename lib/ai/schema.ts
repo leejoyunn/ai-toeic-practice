@@ -37,7 +37,18 @@ export const generatedQuestionSchema = z.object({
   if (!/[\u3400-\u9fff]/u.test(question.translation)) context.addIssue({ code: "custom", message: "翻譯必須包含繁體中文。", path: ["translation"] });
   if (question.part === 5 && (question.passage !== null || question.passageType !== null)) context.addIssue({ code: "custom", message: "Part 5 不應包含文章。", path: ["passage"] });
   if (question.part >= 6 && (!question.passage || question.passage.length < 40)) context.addIssue({ code: "custom", message: "Part 6、7 必須包含完整文章。", path: ["passage"] });
+  if (question.part === 6) {
+    const normalizedPassage = normalizeForComparison(question.passage ?? "");
+    const normalizedPrompt = normalizeForComparison(question.question);
+    if (!/\(\d+\)\s*_{2,}/u.test(question.passage ?? "")) context.addIssue({ code: "custom", message: "Part 6 文章必須保留編號空格，例如 (1) ____。", path: ["passage"] });
+    if (question.question.length > 200 || (normalizedPassage.length >= 30 && normalizedPrompt.includes(normalizedPassage))) context.addIssue({ code: "custom", message: "Part 6 question 只能是簡短提示，不可重複完整文章。", path: ["question"] });
+    if (/\[[A-D]\]/iu.test(question.question)) context.addIssue({ code: "custom", message: "Part 6 選項只能放在 options，不可嵌入 question。", path: ["question"] });
+  }
 });
+
+function normalizeForComparison(value: string) {
+  return value.toLowerCase().replace(/\s+/gu, "").replace(/[^a-z0-9\u3400-\u9fff_()]/gu, "");
+}
 
 export const generatedBatchSchema = z.object({ questions: z.array(generatedQuestionSchema).min(1).max(10) });
 export type GeneratedQuestion = z.infer<typeof generatedQuestionSchema>;

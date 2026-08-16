@@ -47,6 +47,7 @@ Part 規格：${partGuidance(input.part)}
 3. translation 是題目全文（Part 6/7 含文章）的完整繁體中文翻譯。
 4. vocabulary 至少列 1 個重要字，包含中文與詞性。
 5. Part 5 的 passage、passageType 必須為 null；Part 6/7 必須有完整 passage 與 passageType。
+   Part 6：passage 是唯一的完整短文，並在文內保留 (1) ____、(2) ____ 等編號空格；question 絕對不可重複 passage，也不可包含 [A]、[B]、[C]、[D] 選項文字，只能是簡短提示，例如 Choose the best answer for blank (1).；四個答案只能放在 options。
 6. 每題都要有 grammarPoint、topic、scenario、vocabularyDomain、sentencePattern、keywords、difficulty、targetScore。
 7. 同一批題目必須輪替情境、核心單字、主詞、句型與考點；不得產生只有替換人名或名詞的近似題。
 8. 不得引用、改寫或聲稱來自 ETS／TOEIC 官方考題。
