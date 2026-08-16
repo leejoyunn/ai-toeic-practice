@@ -2,6 +2,10 @@ import { generatedBatchSchema, type GeneratedQuestion } from "@/lib/ai/schema";
 import { AiProviderUnavailableError, type AiProvider, type GenerateQuestionsInput } from "@/lib/ai/provider";
 import { partGuidance } from "@/lib/toeic/difficulty";
 
+const DEFAULT_GEMINI_MODEL = "gemini-3.5-flash-lite";
+const GEMINI_MODEL_FALLBACKS = [DEFAULT_GEMINI_MODEL, "gemini-3.1-flash-lite"] as const;
+const MODEL_UNAVAILABLE_MESSAGE = "目前 Gemini 模型已停用或不可用，請更新 GEMINI_MODEL。";
+
 const RESPONSE_SCHEMA = {
   type: "object",
   required: ["questions"],
@@ -20,7 +24,7 @@ const RESPONSE_SCHEMA = {
           vocabulary: { type: "array", minItems: 1, maxItems: 8, items: { type: "object", required: ["word","chineseMeaning","partOfSpeech"], properties: { word:{type:"string"}, chineseMeaning:{type:"string"}, partOfSpeech:{type:"string"}, simpleExample:{type:"string"}, exampleTranslation:{type:"string"}, commonCollocations:{type:"array",items:{type:"string"}} } } },
           grammarPoint:{type:"string"}, topic:{type:"string"}, scenario:{type:"string"}, vocabularyDomain:{type:"string"}, sentencePattern:{type:"string"},
           difficulty:{type:"string",enum:["easy","medium","hard"]}, targetScore:{type:"integer"}, keywords:{type:"array",items:{type:"string"}},
-          passage:{anyOf:[{type:"string"},{type:"null"}]}, passageType:{anyOf:[{type:"string"},{type:"null"}]},
+          passage:{type:["string","null"]}, passageType:{type:["string","null"]},
         },
       },
     },
@@ -47,6 +51,7 @@ Part 規格：${partGuidance(input.part)}
 7. 同一批題目必須輪替情境、核心單字、主詞、句型與考點；不得產生只有替換人名或名詞的近似題。
 8. 不得引用、改寫或聲稱來自 ETS／TOEIC 官方考題。
 9. targetScore 請填 ${input.targetScore}，part 請填 ${input.part}，difficulty 請填 ${input.difficulty}。
+10. 只輸出 JSON，不要加 Markdown。JSON 必須符合這份結構：${JSON.stringify(RESPONSE_SCHEMA)}
 ${retryNote}`;
 }
 
@@ -56,38 +61,52 @@ export class GeminiProvider implements AiProvider {
   async generateQuestions(input: GenerateQuestionsInput): Promise<GeneratedQuestion[]> {
     const apiKey = process.env.GEMINI_API_KEY ?? process.env.AI_API_KEY;
     if (!apiKey) throw new AiProviderUnavailableError("尚未設定 Gemini API Key，請先完成環境變數設定。");
-    const model = process.env.GEMINI_MODEL ?? "gemini-2.5-flash-lite";
+    const configuredModel = process.env.GEMINI_MODEL?.trim() || DEFAULT_GEMINI_MODEL;
+    const models = [configuredModel, ...GEMINI_MODEL_FALLBACKS.filter((model) => model !== configuredModel)];
     let lastError: unknown;
-    for (let attempt = 0; attempt < 3; attempt += 1) {
-      try {
-        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json", "x-goog-api-key": apiKey },
-          body: JSON.stringify({
-            contents: [{ parts: [{ text: buildPrompt(input, attempt ? "前次輸出未通過格式或品質驗證，請逐欄檢查後重新生成。" : "") }] }],
-            generationConfig: { temperature: 0.9, responseMimeType: "application/json", responseJsonSchema: RESPONSE_SCHEMA },
-          }),
-          signal: AbortSignal.timeout(45_000),
-        });
-        if (!response.ok) {
-          const detail = await response.text();
-          if ([401,403].includes(response.status)) throw new AiProviderUnavailableError("Gemini API Key 無效或沒有使用權限，請檢查設定。");
-          if (response.status === 429) throw new AiProviderUnavailableError("Gemini 免費額度目前忙碌，請稍後再試。");
-          throw new Error(`Gemini ${response.status}: ${detail.slice(0, 300)}`);
+    let unavailableModels = 0;
+    for (const model of models) {
+      for (let attempt = 0; attempt < 3; attempt += 1) {
+        try {
+          const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json", "x-goog-api-key": apiKey },
+            body: JSON.stringify({
+              contents: [{ parts: [{ text: buildPrompt(input, attempt ? "前次輸出未通過格式或品質驗證，請逐欄檢查後重新生成。" : "") }] }],
+              generationConfig: { responseMimeType: "application/json" },
+            }),
+            signal: AbortSignal.timeout(45_000),
+          });
+          if (!response.ok) {
+            const detail = await response.text();
+            if ([401,403].includes(response.status)) throw new AiProviderUnavailableError("Gemini API Key 無效或沒有使用權限，請檢查設定。");
+            if (response.status === 429) throw new AiProviderUnavailableError("Gemini 免費額度目前忙碌，請稍後再試。");
+            if (isModelUnavailable(response.status, detail)) {
+              unavailableModels += 1;
+              lastError = new Error(`${MODEL_UNAVAILABLE_MESSAGE}（${model}）`);
+              break;
+            }
+            throw new Error(`Gemini ${response.status}: ${detail.slice(0, 300)}`);
+          }
+          const payload: unknown = await response.json();
+          const text = extractText(payload);
+          const parsed: unknown = JSON.parse(text);
+          const result = generatedBatchSchema.parse(parsed);
+          if (result.questions.some((question) => question.part !== input.part || question.difficulty !== input.difficulty || question.targetScore !== input.targetScore)) throw new Error("AI returned the wrong part or difficulty metadata.");
+          return result.questions;
+        } catch (error) {
+          if (error instanceof AiProviderUnavailableError) throw error;
+          lastError = error;
         }
-        const payload: unknown = await response.json();
-        const text = extractText(payload);
-        const parsed: unknown = JSON.parse(text);
-        const result = generatedBatchSchema.parse(parsed);
-        if (result.questions.some((question) => question.part !== input.part || question.difficulty !== input.difficulty || question.targetScore !== input.targetScore)) throw new Error("AI returned the wrong part or difficulty metadata.");
-        return result.questions;
-      } catch (error) {
-        if (error instanceof AiProviderUnavailableError) throw error;
-        lastError = error;
       }
     }
+    if (unavailableModels === models.length) throw new AiProviderUnavailableError(MODEL_UNAVAILABLE_MESSAGE);
     throw new AiProviderUnavailableError(lastError instanceof Error ? `AI 回傳格式未通過驗證：${lastError.message}` : undefined);
   }
+}
+
+function isModelUnavailable(status: number, detail: string) {
+  return status === 404 || (status === 400 && /model.*(?:unavailable|not found|not supported|deprecated)/i.test(detail));
 }
 
 function extractText(payload: unknown) {
