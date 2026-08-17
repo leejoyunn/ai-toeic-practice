@@ -1,5 +1,6 @@
 import type { GeneratedQuestion } from "@/lib/ai/schema";
 import type { Difficulty, ReadingPart } from "@/types/toeic";
+import type { GeneratedListeningQuestion } from "@/lib/ai/listening-schema";
 
 export interface GenerateQuestionsInput {
   part: ReadingPart;
@@ -17,7 +18,10 @@ export interface GenerateQuestionsInput {
 export interface AiProvider {
   readonly name: string;
   generateQuestions(input: GenerateQuestionsInput): Promise<GeneratedQuestion[]>;
+  generateListeningQuestions(input: GenerateListeningQuestionsInput): Promise<GeneratedListeningQuestion[]>;
 }
+
+export interface GenerateListeningQuestionsInput{part:1|2|3|4;count:number;targetScore:number;currentEstimatedLevel:number;difficulty:Difficulty;weakSkills:string[];recentScenarios:string[];image?:GeneratedListeningQuestion["image"]}
 
 export class AiProviderUnavailableError extends Error {
   constructor(message = "目前無法產生新題目，請稍後再試。") {
@@ -41,4 +45,5 @@ class GeminiProviderProxy implements AiProvider {
     const { GeminiProvider } = await import("./providers/gemini");
     return new GeminiProvider().generateQuestions(input);
   }
+  async generateListeningQuestions(input: GenerateListeningQuestionsInput){const {generateGeminiListeningQuestions}=await import("./providers/gemini-listening");return generateGeminiListeningQuestions(input);}
 }

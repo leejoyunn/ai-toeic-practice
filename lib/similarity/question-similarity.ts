@@ -1,4 +1,4 @@
-import type { GeneratedQuestion } from "@/lib/ai/schema";
+interface SimilarityQuestion {question:string;passage?:string|null;options:Array<{text:string}>}
 
 export const SIMILARITY_CONFIG = { batchThreshold: 0.78, recentThreshold: 0.84, recentQuestionLimitPhase2: 60 } as const;
 
@@ -6,11 +6,11 @@ export function normalizeText(value: string) {
   return value.toLowerCase().normalize("NFKC").replace(/[^a-z0-9\s]/g, " ").replace(/\s+/g, " ").trim();
 }
 
-export function questionFingerprint(question: Pick<GeneratedQuestion, "question" | "passage" | "options">) {
+export function questionFingerprint(question: SimilarityQuestion) {
   return normalizeText([question.passage ?? "", question.question, ...question.options.map((option) => option.text)].join(" "));
 }
 
-export async function createQuestionHash(question: Pick<GeneratedQuestion, "question" | "passage" | "options">) {
+export async function createQuestionHash(question: SimilarityQuestion) {
   const bytes = new TextEncoder().encode(questionFingerprint(question));
   const digest = await crypto.subtle.digest("SHA-256", bytes);
   return Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, "0")).join("");
@@ -29,7 +29,7 @@ function ngramSimilarity(left: string, right: string) {
 }
 export function similarityScore(left: string, right: string) { return Math.max(jaccard(left, right), ngramSimilarity(left, right)); }
 
-export function isQuestionTooSimilar(candidate: GeneratedQuestion, previous: Array<Pick<GeneratedQuestion, "question" | "passage" | "options">>, threshold: number = SIMILARITY_CONFIG.batchThreshold) {
+export function isQuestionTooSimilar(candidate: SimilarityQuestion, previous: SimilarityQuestion[], threshold: number = SIMILARITY_CONFIG.batchThreshold) {
   const fingerprint = questionFingerprint(candidate);
   return previous.some((question) => similarityScore(fingerprint, questionFingerprint(question)) >= threshold);
 }

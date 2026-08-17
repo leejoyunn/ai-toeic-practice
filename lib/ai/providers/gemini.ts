@@ -114,6 +114,10 @@ export class GeminiProvider implements AiProvider {
     if (unavailableModels === models.length) throw new AiProviderUnavailableError(MODEL_UNAVAILABLE_MESSAGE);
     throw new AiProviderUnavailableError(lastError instanceof Error ? `AI 回傳格式未通過驗證：${lastError.message}` : undefined);
   }
+
+  async generateListeningQuestions(): Promise<never> {
+    throw new AiProviderUnavailableError("請透過 Listening provider 產生聽力題目。");
+  }
 }
 
 const optionReviewSchema = z.object({ valid: z.boolean(), invalidOptions: z.array(z.string()), reason: z.string() });
