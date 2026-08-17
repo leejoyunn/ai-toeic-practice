@@ -89,3 +89,7 @@ Cleanup 只會移除本專案明確命名的 `public` tables、types、function�
 - Phase 8：完整 UI／PWA 圖示與離線策略、錯誤處理、正式部署。
 
 防重複所需的 `question_hash`、`grammar_point`、`scenario`、`vocabulary_domain`、`sentence_pattern` 及索引已在 Phase 1 schema 預留。正式資料以 Supabase 為準，瀏覽器儲存只會用於 UI 偏好與未送出暫存。
+
+## Part 1 圖片素材
+
+Part 1 使用 `public/listening/` 內的本機圖片，不會在練習時向外部圖片網站載入。每張圖片的來源頁與授權名稱保存在 `lib/listening/images.ts` metadata；素材分別依 [Unsplash License](https://unsplash.com/license) 與 [Pexels License](https://www.pexels.com/license/) 使用。請勿在未更新 metadata 與來源資訊的情況下替換圖片檔案。

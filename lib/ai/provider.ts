@@ -21,7 +21,7 @@ export interface AiProvider {
   generateListeningQuestions(input: GenerateListeningQuestionsInput): Promise<GeneratedListeningQuestion[]>;
 }
 
-export interface GenerateListeningQuestionsInput{part:1|2|3|4;count:number;targetScore:number;currentEstimatedLevel:number;difficulty:Difficulty;weakSkills:string[];recentScenarios:string[];image?:GeneratedListeningQuestion["image"]}
+export interface GenerateListeningQuestionsInput{part:1|2|3|4;count:number;targetScore:number;currentEstimatedLevel:number;difficulty:Difficulty;weakSkills:string[];recentScenarios:string[];images?:Array<NonNullable<GeneratedListeningQuestion["image"]>>}
 
 export class AiProviderUnavailableError extends Error {
   constructor(message = "目前無法產生新題目，請稍後再試。") {

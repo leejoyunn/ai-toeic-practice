@@ -11,9 +11,9 @@ export interface StoredQuestionRow {
 }
 
 export async function getRecentQuestions(supabase: SupabaseClient, userId: string, part: ToeicPart, limit: number) {
-  const { data, error } = await supabase.from("questions").select("id,question,passage,options,question_hash,scenario,vocabulary_domain,sentence_pattern").eq("user_id", userId).eq("part", part).order("created_at", { ascending:false }).limit(limit);
+  const { data, error } = await supabase.from("questions").select("id,question,passage,options,question_hash,scenario,vocabulary_domain,sentence_pattern,generation_metadata").eq("user_id", userId).eq("part", part).order("created_at", { ascending:false }).limit(limit);
   if (error) throw new Error(`讀取近期題目失敗：${error.message}`);
-  return (data ?? []) as Array<{id:string;question:string;passage:string|null;options:GeneratedQuestion["options"];question_hash:string;scenario:string;vocabulary_domain:string;sentence_pattern:string}>;
+  return (data ?? []) as Array<{id:string;question:string;passage:string|null;options:GeneratedQuestion["options"];question_hash:string;scenario:string;vocabulary_domain:string;sentence_pattern:string;generation_metadata:Record<string,unknown>|null}>;
 }
 
 export async function saveGeneratedListeningQuestions(supabase:SupabaseClient,userId:string,provider:string,questions:Array<GeneratedListeningQuestion&{questionHash:string}>){

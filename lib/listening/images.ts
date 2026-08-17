@@ -1,7 +1,29 @@
-import type{GeneratedListeningQuestion}from"@/lib/ai/listening-schema";
-type ListeningImage=NonNullable<GeneratedListeningQuestion["image"]>;
-export const listeningImages:ListeningImage[]=[
- {id:"office-meeting",imageUrl:"/listening/office-meeting.jpg",description:"Two colleagues are seated at a table in a bright office and reviewing documents together.",tags:["office","meeting","documents"],scene:"modern office meeting area",objects:["table","chairs","documents","laptop"],actions:["reviewing documents","sitting","discussing work"],isActive:true},
- {id:"station-platform",imageUrl:"/listening/station-platform.jpg",description:"Travelers are waiting with luggage on a railway station platform.",tags:["travel","station","luggage"],scene:"railway station platform",objects:["train","suitcases","platform signs"],actions:["waiting","carrying luggage","boarding"],isActive:true},
+import type { GeneratedListeningQuestion } from "@/lib/ai/listening-schema";
+
+export type ListeningImage = NonNullable<GeneratedListeningQuestion["image"]>;
+const pexelsLicense = "Pexels License";
+const unsplashLicense = "Unsplash License";
+
+export const listeningImages: ListeningImage[] = [
+  { id:"office-meeting", imageUrl:"/listening/office-meeting.jpg", description:"Two colleagues are seated at a table in a bright office and reviewing documents together.", tags:["office","meeting","documents"], scene:"office", objects:["table","chairs","documents","laptop"], actions:["reviewing documents","sitting","discussing work"], isActive:true, sourceName:"Unsplash", sourceUrl:"https://unsplash.com/photos/KdeqA3aTnBY", license:unsplashLicense },
+  { id:"station-platform", imageUrl:"/listening/station-platform.jpg", description:"Travelers are walking along a railway station platform beside a train.", tags:["travel","station","platform"], scene:"train station", objects:["train","platform","station roof"], actions:["walking","waiting","moving along the platform"], isActive:true, sourceName:"Unsplash", sourceUrl:"https://unsplash.com/photos/3QMHpwS3URo", license:unsplashLicense },
+  { id:"meeting-team", imageUrl:"/listening/meeting-team.jpg", description:"Several coworkers are placing their hands together above a table covered with business charts.", tags:["teamwork","meeting","charts"], scene:"meeting room", objects:["hands","charts","notebook","laptops","table"], actions:["placing hands together","working as a team"], isActive:true, sourceName:"Pexels", sourceUrl:"https://www.pexels.com/photo/photo-of-people-near-wooden-table-3184418/", license:pexelsLicense },
+  { id:"restaurant-service", imageUrl:"/listening/restaurant-table.jpg", description:"A restaurant server is carrying two plates of prepared food through a dining area.", tags:["restaurant","server","food"], scene:"restaurant", objects:["plates","salad","tables","chairs"], actions:["carrying plates","serving food"], isActive:true, sourceName:"Pexels", sourceUrl:"https://www.pexels.com/photo/262978/", license:pexelsLicense },
+  { id:"airport-terminal", imageUrl:"/listening/airport-terminal.jpg", description:"A traveler is standing near a long row of check-in counters in an airport terminal.", tags:["airport","travel","check-in"], scene:"airport", objects:["check-in counters","flight information signs","barriers"], actions:["standing","checking in","looking toward the counters"], isActive:true, sourceName:"Pexels", sourceUrl:"https://www.pexels.com/photo/2574078/", license:pexelsLicense },
+  { id:"warehouse-shelves", imageUrl:"/listening/warehouse-shelves.jpg", description:"Boxes and containers are arranged on tall storage racks inside a warehouse.", tags:["warehouse","inventory","boxes"], scene:"warehouse", objects:["storage racks","boxes","containers","pallets"], actions:["being stored","being arranged on shelves"], isActive:true, sourceName:"Pexels", sourceUrl:"https://www.pexels.com/photo/4483610/", license:pexelsLicense },
+  { id:"travel-planning", imageUrl:"/listening/travel-planning.jpg", description:"A person is pointing to a model airplane beside a world map drawn on a board.", tags:["travel","planning","map"], scene:"travel planning", objects:["model airplane","world map","board"], actions:["pointing","planning a trip"], isActive:true, sourceName:"Pexels", sourceUrl:"https://www.pexels.com/photo/3769138/", license:pexelsLicense },
+  { id:"city-skyline", imageUrl:"/listening/city-skyline.jpg", description:"Many office buildings and busy streets are visible from above in a city center.", tags:["city","buildings","street"], scene:"city street", objects:["office buildings","streets","cars"], actions:["moving through traffic","lighting the buildings"], isActive:true, sourceName:"Pexels", sourceUrl:"https://www.pexels.com/photo/373912/", license:pexelsLicense },
+  { id:"construction-worker", imageUrl:"/listening/construction-work.jpg", description:"A construction worker wearing safety equipment is carrying a large pipe at a work site.", tags:["construction","worker","safety"], scene:"construction site", objects:["pipe","hard hat","safety vest","metal frame"], actions:["carrying a pipe","working","wearing safety equipment"], isActive:true, sourceName:"Pexels", sourceUrl:"https://www.pexels.com/photo/585419/", license:pexelsLicense },
+  { id:"hotel-pool", imageUrl:"/listening/hotel-pool.jpg", description:"Empty lounge chairs are lined up beside an outdoor hotel swimming pool.", tags:["hotel","pool","chairs"], scene:"hotel", objects:["swimming pool","lounge chairs","buildings"], actions:["being lined up","reflecting lights"], isActive:true, sourceName:"Pexels", sourceUrl:"https://www.pexels.com/photo/261102/", license:pexelsLicense },
+  { id:"packing-box", imageUrl:"/listening/packing-box.jpg", description:"A worker is sealing a large cardboard box with a handheld tape dispenser.", tags:["packing","box","shipping"], scene:"packing area", objects:["cardboard box","tape dispenser","packing tape"], actions:["sealing a box","packing an item"], isActive:true, sourceName:"Pexels", sourceUrl:"https://www.pexels.com/photo/4246120/", license:pexelsLicense },
 ];
-export function getListeningImage(id?:string){return listeningImages.find((image)=>image.id===id&&image.isActive)??listeningImages.find((image)=>image.isActive);}
+
+export function selectListeningImages(count:number,recentImageIds:string[]=[]){
+  const active=listeningImages.filter((image)=>image.isActive);
+  if(count>active.length)throw new Error(`Part 1 圖片素材目前只有 ${active.length} 張，無法建立 ${count} 題不重複練習。`);
+  const recent=new Set(recentImageIds);const scenes=new Set<string>();const selected:ListeningImage[]=[];
+  const ranked=[...active].sort((a,b)=>Number(recent.has(a.id))-Number(recent.has(b.id))||a.id.localeCompare(b.id));
+  for(const image of ranked){if(selected.length===count)break;if(!scenes.has(image.scene)){selected.push(image);scenes.add(image.scene);}}
+  for(const image of ranked){if(selected.length===count)break;if(!selected.some((item)=>item.id===image.id))selected.push(image);}
+  return selected;
+}
