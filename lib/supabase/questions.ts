@@ -17,7 +17,7 @@ export async function getRecentQuestions(supabase: SupabaseClient, userId: strin
 }
 
 export async function saveGeneratedListeningQuestions(supabase:SupabaseClient,userId:string,provider:string,questions:Array<GeneratedListeningQuestion&{questionHash:string}>){
-  const rows=questions.map((question)=>({user_id:userId,part:question.part,question_type:question.questionType,question:question.question,options:question.options,correct_answer:question.correctAnswer,explanation:question.explanation,translation:question.translation,vocabulary:question.vocabulary,grammar_point:question.skill,difficulty:question.difficulty,target_score:question.targetScore,topic:question.topic,scenario:question.scenario,keywords:question.keywords,vocabulary_domain:question.vocabularyDomain,sentence_pattern:question.sentencePattern,transcript:question.transcript,speakers:question.speakers,question_hash:question.questionHash,provider,generation_metadata:{phase:3,validated:true,audioGroupId:question.audioGroupId,audioType:question.audioType,dialogue:question.dialogue,image:question.image}}));
+  const rows=questions.map((question)=>({user_id:userId,part:question.part,question_type:question.questionType,question:question.question,options:question.options,correct_answer:question.correctAnswer,explanation:question.explanation,translation:question.translation,vocabulary:question.vocabulary,grammar_point:question.skill,difficulty:question.difficulty,target_score:question.targetScore,topic:question.topic,scenario:question.scenario,keywords:question.keywords,vocabulary_domain:question.vocabularyDomain,sentence_pattern:question.sentencePattern,transcript:question.transcript,speakers:question.speakers,question_hash:question.questionHash,provider,generation_metadata:{phase:3,validated:true,deduplicationVersion:4,audioGroupId:question.audioGroupId,audioType:question.audioType,dialogue:question.dialogue,image:question.image}}));
   const {data,error}=await supabase.from("questions").insert(rows).select("*");if(error)throw new Error(`儲存 Listening 題目失敗：${error.message}`);return(data??[])as StoredQuestionRow[];
 }
 
@@ -28,7 +28,7 @@ export async function saveGeneratedQuestions(supabase: SupabaseClient, userId:st
     options:question.options, correct_answer:question.correctAnswer, explanation:question.explanation, translation:question.translation, vocabulary:question.vocabulary,
     grammar_point:question.grammarPoint, difficulty:question.difficulty, target_score:question.targetScore, topic:question.topic, scenario:question.scenario,
     keywords:question.keywords, vocabulary_domain:question.vocabularyDomain, sentence_pattern:question.sentencePattern, passage:question.passage,
-    passage_type:question.passageType, question_hash:question.questionHash, provider, generation_metadata:{phase:2,validated:true,passageGroupId:question.passageGroupId,blankNumber:question.blankNumber,documents:question.documents} }));
+    passage_type:question.passageType, question_hash:question.questionHash, provider, generation_metadata:{phase:2,validated:true,deduplicationVersion:4,passageGroupId:question.passageGroupId,blankNumber:question.blankNumber,documents:question.documents} }));
   const { data, error } = await supabase.from("questions").insert(rows).select("*");
   if (error) throw new Error(`儲存題目失敗：${error.message}`);
   return (data ?? []) as StoredQuestionRow[];

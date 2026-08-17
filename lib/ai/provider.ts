@@ -1,6 +1,7 @@
 import type { GeneratedQuestion } from "@/lib/ai/schema";
 import type { Difficulty, ReadingPart } from "@/types/toeic";
 import type { GeneratedListeningQuestion } from "@/lib/ai/listening-schema";
+import type { RotationPlan } from "@/lib/toeic/rotation/rotation-service";
 
 export interface GenerateQuestionsInput {
   part: ReadingPart;
@@ -13,6 +14,7 @@ export interface GenerateQuestionsInput {
   recentVocabularyDomains: string[];
   recentSentencePatterns: string[];
   passageMode?: "single" | "double" | "triple";
+  rotation?: RotationPlan;
 }
 
 export interface AiProvider {
@@ -21,7 +23,7 @@ export interface AiProvider {
   generateListeningQuestions(input: GenerateListeningQuestionsInput): Promise<GeneratedListeningQuestion[]>;
 }
 
-export interface GenerateListeningQuestionsInput{part:1|2|3|4;count:number;targetScore:number;currentEstimatedLevel:number;difficulty:Difficulty;weakSkills:string[];recentScenarios:string[];images?:Array<NonNullable<GeneratedListeningQuestion["image"]>>}
+export interface GenerateListeningQuestionsInput{part:1|2|3|4;count:number;targetScore:number;currentEstimatedLevel:number;difficulty:Difficulty;weakSkills:string[];recentScenarios:string[];images?:Array<NonNullable<GeneratedListeningQuestion["image"]>>;rotation?:RotationPlan}
 
 export class AiProviderUnavailableError extends Error {
   constructor(message = "目前無法產生新題目，請稍後再試。") {

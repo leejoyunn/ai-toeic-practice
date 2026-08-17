@@ -44,6 +44,9 @@ Part 規格：${partGuidance(input.part)}
 最近已用情境（本批盡量避開）：${input.recentScenarios.join("、") || "無"}
 最近字彙領域（本批輪替）：${input.recentVocabularyDomains.join("、") || "無"}
 最近句型（本批不得只換主詞重做）：${input.recentSentencePatterns.join("、") || "無"}
+優先情境：${input.rotation?.preferredScenarios.join("、")||"依題意輪替"}
+優先考點：${input.rotation?.preferredSkills.join("、")||"依弱項與 Part 選擇"}
+近期過度集中，請降低權重：情境 ${input.rotation?.avoidScenarios.join("、")||"無"}；考點 ${input.rotation?.avoidSkills.join("、")||"無"}；主題 ${input.rotation?.avoidTopics.join("、")||"無"}
 
 強制品質規則：
 1. 每題只有一個合理最佳答案，A/B/C/D 各出現一次。
@@ -56,7 +59,7 @@ Part 規格：${partGuidance(input.part)}
    Part 6：本批 ${input.count} 題必須共用同一篇完整 passage 與同一 passageGroupId，passage 依序包含 ${Array.from({length:input.count},(_,index)=>`(${index+1}) ____`).join("、")}；每題 blankNumber 各自對應一個空格。question 不可重複 passage 或包含選項，只能是簡短提示。documents 填一份與 passage 相同內容的文件。questionType 要混合 vocabulary、grammar、sentence_insertion、context。每一題都必須重複填入同一篇文章的完整繁體中文 translation，不得只有第一題有翻譯、其餘留空。
    Part 7：本批題目必須共用同一 passageGroupId 與同一組 documents；本次模式是 ${passageMode} passage，documents 必須真的包含 ${passageMode==="single"?1:passageMode==="double"?2:3} 份類型不同但資訊互相關聯的完整文件，passageType 填 ${passageMode}_passage，passage 填所有文件的可讀合併文字。不可把單篇任意切段假裝多篇。questionType 從 detail、main_purpose、paraphrase、inference、vocabulary_in_context、cross_document 選擇；Single 不可用 cross_document。Easy 以 detail 為主但至少一題 paraphrase；Medium 增加 paraphrase/inference；Hard 與多文件必須包含 inference/cross_document。
 6. 每題都要有 grammarPoint、topic、scenario、vocabularyDomain、sentencePattern、keywords、difficulty、targetScore。
-7. 同一批題目必須輪替情境、核心單字、主詞、句型與考點；不得產生只有替換人名或名詞的近似題。
+7. 同一批題目必須輪替情境、核心單字、主詞、句型與考點；優先採用「優先情境／優先考點」，降低近期過度集中項目的權重；不得產生只有替換人名或名詞的近似題。
 8. 不得引用、改寫或聲稱來自 ETS／TOEIC 官方考題。
 9. targetScore 請填 ${input.targetScore}，part 請填 ${input.part}，difficulty 請填 ${input.difficulty}。
 10. 只輸出 JSON，不要加 Markdown。JSON 必須符合這份結構：${JSON.stringify(RESPONSE_SCHEMA)}

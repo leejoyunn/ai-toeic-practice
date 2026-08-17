@@ -21,8 +21,9 @@ export const listeningImages: ListeningImage[] = [
 export function selectListeningImages(count:number,recentImageIds:string[]=[]){
   const active=listeningImages.filter((image)=>image.isActive);
   if(count>active.length)throw new Error(`Part 1 圖片素材目前只有 ${active.length} 張，無法建立 ${count} 題不重複練習。`);
-  const recent=new Set(recentImageIds);const scenes=new Set<string>();const selected:ListeningImage[]=[];
-  const ranked=[...active].sort((a,b)=>Number(recent.has(a.id))-Number(recent.has(b.id))||a.id.localeCompare(b.id));
+  const lastUsed=new Map<string,number>();recentImageIds.forEach((id,index)=>{if(!lastUsed.has(id))lastUsed.set(id,index);});const scenes=new Set<string>();const selected:ListeningImage[]=[];
+  const cooldownRank=(id:string)=>lastUsed.has(id)?-(lastUsed.get(id)??0):Number.NEGATIVE_INFINITY;
+  const ranked=[...active].sort((a,b)=>cooldownRank(a.id)-cooldownRank(b.id)||a.id.localeCompare(b.id));
   for(const image of ranked){if(selected.length===count)break;if(!scenes.has(image.scene)){selected.push(image);scenes.add(image.scene);}}
   for(const image of ranked){if(selected.length===count)break;if(!selected.some((item)=>item.id===image.id))selected.push(image);}
   return selected;

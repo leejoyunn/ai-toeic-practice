@@ -1,0 +1,3 @@
+export const TOEIC_SCENARIOS=["Office","Meeting","Hotel","Airport","Restaurant","Shopping","Customer Service","Human Resources","Finance","Logistics","Travel","Event","Maintenance","Rental","Factory","Conference","Marketing","Sales","Delivery","Reservation","Transportation","Banking","Training","Recruitment"]as const;
+export const READING_SKILLS=["verb_tense","passive_voice","preposition","conjunction","relative_pronoun","word_form","vocabulary","part6_context","part7_detail","part7_inference","part7_paraphrase"]as const;
+export const LISTENING_SKILLS=["part2_wh_question","part2_indirect_response","part3_detail","part3_purpose","part3_inference","part4_main_idea","part4_detail","part4_inference"]as const;
