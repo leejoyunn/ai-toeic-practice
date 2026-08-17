@@ -25,7 +25,7 @@ export function buildPartFingerprint(record:SimilarityRecord){
  * dilute a repeated stem or listening script. */
 export function buildPrimaryFingerprint(record:SimilarityRecord){
   switch(record.part){
-    case 1:return join([record.image?.id]);
+    case 1:return join([record.options.map((option)=>option.text).join(" ")]);
     case 2:return join([record.transcript]);
     case 3:
     case 4:return join([record.transcript]);

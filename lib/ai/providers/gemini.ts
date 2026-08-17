@@ -47,6 +47,7 @@ Part 規格：${partGuidance(input.part)}
 優先情境：${input.rotation?.preferredScenarios.join("、")||"依題意輪替"}
 優先考點：${input.rotation?.preferredSkills.join("、")||"依弱項與 Part 選擇"}
 近期過度集中，請降低權重：情境 ${input.rotation?.avoidScenarios.join("、")||"無"}；考點 ${input.rotation?.avoidSkills.join("、")||"無"}；主題 ${input.rotation?.avoidTopics.join("、")||"無"}
+本次重生必須修正：${input.regenerateGuidance?.join("；")||"無"}
 
 強制品質規則：
 1. 每題只有一個合理最佳答案，A/B/C/D 各出現一次。
