@@ -2,8 +2,9 @@
 
 import Image from "next/image";
 import { useMemo, useState } from "react";
-import { Check, ChevronDown, Headphones, LoaderCircle, RotateCcw, Sparkles } from "lucide-react";
+import { Check, ChevronDown, Headphones, LoaderCircle, Pause, Play, RotateCcw, SkipBack, Sparkles } from "lucide-react";
 import { useTts } from "@/features/listening/use-tts";
+import { buildPart2TtsSegments } from "@/lib/tts/toeic-sequences";
 import type { Difficulty, QuestionOption, VocabularyEntry } from "@/types/toeic";
 
 interface StoredQuestion {
@@ -81,19 +82,24 @@ function WrongDetail({ item, onMark, onError }: { item: WrongAnswerItem; onMark:
     if (!response.ok || !payload.url) { onError(payload.error ?? "無法生成同考點新題。"); return; }
     window.location.assign(payload.url);
   }
-  function playAudio() { tts.play([{ text: q.transcript ?? q.question, speaker: "Narrator" }]); }
+  function playAudio() {
+    const segments = q.part === 2
+      ? buildPart2TtsSegments(q.transcript ?? q.question, q.options)
+      : [{ text: q.transcript ?? q.question, speaker: "Narrator" }];
+    tts.play(segments);
+  }
 
   return <div className="wrong-detail">
     {q.part === 1 && image && typeof image.imageUrl === "string" && <Image className="listening-photo" src={image.imageUrl} alt={typeof image.description === "string" ? image.description : "原錯題圖片"} width={900} height={600} />}
     {documents.map((doc, index) => <div className="passage" key={index}><span>{typeof doc.label === "string" ? doc.label : `Document ${index + 1}`}</span><p>{String(doc.content ?? "")}</p></div>)}
     {q.passage && <div className="passage"><span>{q.passage_type}</span><p>{q.passage}</p></div>}
-    <dl className="wrong-summary"><div><dt>正確答案</dt><dd>{q.correct_answer}</dd></div><div><dt>中文解析</dt><dd>{q.explanation}</dd></div><div><dt>完整翻譯</dt><dd>{q.translation}</dd></div>
+    {!retry && <dl className="wrong-summary"><div><dt>正確答案</dt><dd>{q.correct_answer}</dd></div><div><dt>中文解析</dt><dd>{q.explanation}</dd></div><div><dt>完整翻譯</dt><dd>{q.translation}</dd></div>
       {q.vocabulary.length > 0 && <div><dt>單字解釋</dt><dd>{q.vocabulary.map((word) => <p key={`${word.word}-${word.partOfSpeech}`}><b>{word.word}</b> ({word.partOfSpeech})：{word.chineseMeaning}</p>)}</dd></div>}
-      {q.transcript && <div><dt>Transcript</dt><dd>{q.transcript}</dd></div>}</dl>
+      {q.transcript && <div><dt>Transcript</dt><dd>{q.transcript}</dd></div>}</dl>}
     {retry && <div className="retry-panel"><h3>{q.part <= 4 ? "請先聽音訊後作答（Transcript 會在作答後顯示）" : q.question}</h3>
-      {q.part <= 4 && <button className="button button-small" onClick={playAudio} disabled={!tts.supported}><Headphones />{tts.status === "playing" ? "播放中…" : "播放題目"}</button>}{tts.error && <div className="practice-error">{tts.error}</div>}
+      {q.part <= 4 && <div className="audio-controls" aria-live="polite"><button className="button button-small" onClick={playAudio} disabled={!tts.supported}><Headphones />{tts.status === "playing" ? "播放中…" : "播放題目"}</button><button type="button" onClick={tts.status === "paused" ? tts.resume : tts.pause} disabled={tts.status === "idle"} aria-label={tts.status === "paused" ? "繼續播放" : "暫停"}>{tts.status === "paused" ? <Play /> : <Pause />}</button><button type="button" onClick={playAudio} disabled={!tts.supported} aria-label="重新播放"><SkipBack /></button></div>}{tts.error && <div className="practice-error">{tts.error}</div>}
       <div className="options-list">{q.options.map((option) => <button className={`option-card ${result?.correctAnswer === option.id ? "correct" : ""} ${selected === option.id && result && !result.isCorrect ? "wrong" : ""}`} disabled={Boolean(selected)} onClick={() => answer(option.id)} key={option.id}><span>{option.id}</span><strong>{q.part <= 4 && !result ? `選項 ${option.id}` : option.text}</strong></button>)}</div>
-      {result && <div className="retry-result"><strong>{result.isCorrect ? "答對了！" : "再看一次就會了"}</strong><p>{result.explanation}</p>{result.transcript && <p><b>Transcript：</b>{result.transcript}</p>}{result.mastery && <p><b>目前考點狀態：</b>{masteryText(result.mastery.masteryLevel)}（近期正確率 {Math.round(result.mastery.recentAccuracy)}%）</p>}</div>}
+      {result && <div className="retry-result"><strong>{result.isCorrect ? "答對了！" : "再看一次就會了"}</strong><p><b>你的答案：</b>{selected} · <b>正確答案：</b>{result.correctAnswer}</p>{result.transcript && <p><b>Question transcript：</b>{result.transcript}</p>}<p><b>中文解析：</b>{result.explanation}</p><p><b>完整翻譯：</b>{result.translation}</p>{result.vocabulary.length > 0 && <div><b>單字：</b>{result.vocabulary.map((word) => <p key={`${word.word}-${word.partOfSpeech}`}>{word.word} ({word.partOfSpeech})：{word.chineseMeaning}</p>)}</div>}<p><b>Skill：</b>{result.grammarPoint}</p>{result.mastery && <p><b>目前考點狀態：</b>{masteryText(result.mastery.masteryLevel)}（近期正確率 {Math.round(result.mastery.recentAccuracy)}%）</p>}</div>}
     </div>}
     <div className="wrong-actions"><button className="button button-small" onClick={() => setRetry(true)}><RotateCcw />重新作答</button><button className="button button-small secondary-button" onClick={remediate} disabled={loading}>{loading ? <LoaderCircle className="spin" /> : <Sparkles />}AI 生成同考點新題</button><button className="button button-small secondary-button" onClick={onMark}><Check />{item.resolved ? "取消已熟悉" : "標示已熟悉"}</button></div>
   </div>;

@@ -3,8 +3,9 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { ArrowLeft, Check, ChevronRight, Headphones, Sparkles, X } from "lucide-react";
+import { ArrowLeft, Check, ChevronRight, Headphones, Pause, Play, SkipBack, Sparkles, X } from "lucide-react";
 import { useTts } from "@/features/listening/use-tts";
+import { buildPart2TtsSegments } from "@/lib/tts/toeic-sequences";
 import type { QuestionOption, VocabularyEntry } from "@/types/toeic";
 
 export interface RemediationQuestion {
@@ -40,7 +41,13 @@ export function RemediationPractice({ sessionId, questions }: { sessionId: strin
     setResult(payload);
   }
   function next() { setIndex((value) => value + 1); setSelected(null); setResult(null); setError(""); }
-  function play() { if (current) tts.play([{ text: current.transcript ?? current.question, speaker: "Narrator" }]); }
+  function play() {
+    if (!current) return;
+    const segments = current.part === 2
+      ? buildPart2TtsSegments(current.transcript ?? current.question, current.options)
+      : [{ text: current.transcript ?? current.question, speaker: "Narrator" }];
+    tts.play(segments);
+  }
 
   if (!current) return <main className="reading-page"><section className="finish-card"><Check /><h1>補強練習完成</h1><Link href="/wrong-answers" className="button">回到錯題本</Link></section></main>;
   const metadata = current.generation_metadata ?? {};
@@ -54,7 +61,7 @@ export function RemediationPractice({ sessionId, questions }: { sessionId: strin
       {current.part === 1 && image && typeof image.imageUrl === "string" && <Image className="listening-photo" src={image.imageUrl} alt="Part 1 remediation" width={900} height={600} />}
       {documents.map((doc, i) => <article className="passage" key={i}><span>{String(doc.label ?? `Document ${i + 1}`)}</span><p>{String(doc.content ?? "")}</p></article>)}
       {current.passage && <article className="passage"><span>{current.passage_type}</span><p>{current.passage}</p></article>}
-      {current.part <= 4 && <div className="audio-controls"><button className="button button-small" onClick={play} disabled={!tts.supported}><Headphones />{tts.status === "playing" ? "播放中…" : "播放題目"}</button><span>作答後才會顯示 transcript。</span></div>}
+      {current.part <= 4 && <div className="audio-controls" aria-live="polite"><button className="button button-small" onClick={play} disabled={!tts.supported}><Headphones />{tts.status === "playing" ? "播放中…" : "播放題目"}</button><button type="button" onClick={tts.status === "paused" ? tts.resume : tts.pause} disabled={tts.status === "idle"} aria-label={tts.status === "paused" ? "繼續播放" : "暫停"}>{tts.status === "paused" ? <Play /> : <Pause />}</button><button type="button" onClick={play} disabled={!tts.supported} aria-label="重新播放"><SkipBack /></button><span>作答後才會顯示 transcript。</span></div>}
       {tts.error && <div className="practice-error">{tts.error}</div>}
       <h1>{current.part <= 2 ? "請聽音訊並選出最佳答案。" : current.question}</h1>
       <div className="options-list">{current.options.map((option) => {
@@ -63,7 +70,7 @@ export function RemediationPractice({ sessionId, questions }: { sessionId: strin
         return <button className={`option-card ${correct ? "correct" : ""} ${wrong ? "wrong" : ""}`} disabled={Boolean(selected)} onClick={() => answer(option.id)} key={option.id}><span>{option.id}</span><strong>{current.part <= 4 && !result ? `選項 ${option.id}` : option.text}</strong>{correct && <Check />}{wrong && <X />}</button>;
       })}</div>{error && <div className="practice-error">{error}</div>}
     </div>
-      {result && <aside className={`explanation-card ${result.isCorrect ? "success" : "failure"}`}><h2>{result.isCorrect ? "答對了！" : "再練一次就會了"}</h2>
+      {result && <aside className={`explanation-card ${result.isCorrect ? "success" : "failure"}`}><h2>{result.isCorrect ? "答對了！" : "再練一次就會了"}</h2><p><b>你的答案：</b>{selected} · <b>正確答案：</b>{result.correctAnswer}</p>
         {result.transcript && <section className="answer-detail"><h2>Transcript</h2><p>{result.transcript}</p></section>}
         <section className="answer-detail"><h2>中文解析</h2><p>{result.explanation}</p></section>
         <section className="answer-detail"><h2>考點</h2><p>{result.grammarPoint}</p></section>
