@@ -1,21 +1,6 @@
-import { NextResponse } from "next/server";
-import { attemptRequestSchema } from "@/lib/ai/schema";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
-
-export async function POST(request:Request) {
-  try {
-    const input=attemptRequestSchema.parse(await request.json());
-    const supabase=await createSupabaseServerClient(); if(!supabase)return NextResponse.json({error:"尚未設定 Supabase。"},{status:503});
-    const {data:{user}}=await supabase.auth.getUser(); if(!user)return NextResponse.json({error:"登入狀態已失效，請重新登入。"},{status:401});
-    const {data:question,error}=await supabase.from("questions").select("*").eq("id",input.questionId).eq("user_id",user.id).single();
-    if(error||!question)return NextResponse.json({error:"找不到這道題目。"},{status:404});
-    const isCorrect=input.selectedAnswer===question.correct_answer;
-    const {data:attempt,error:attemptError}=await supabase.from("attempts").insert({user_id:user.id,question_id:question.id,selected_answer:input.selectedAnswer,correct_answer:question.correct_answer,is_correct:isCorrect,part:question.part,grammar_point:question.grammar_point,topic:question.topic,difficulty:question.difficulty}).select("id").single();
-    if(attemptError)throw new Error(`儲存作答失敗：${attemptError.message}`);
-    if(!isCorrect) {
-      const {error:wrongAnswerError}=await supabase.from("wrong_answers").upsert({user_id:user.id,question_id:question.id,first_attempt_id:attempt.id,wrong_count:1,last_wrong_at:new Date().toISOString(),next_review_at:new Date(Date.now()+86400000).toISOString()},{onConflict:"user_id,question_id"});
-      if(wrongAnswerError)throw new Error(`儲存錯題失敗：${wrongAnswerError.message}`);
-    }
-    return NextResponse.json({isCorrect,correctAnswer:question.correct_answer,explanation:question.explanation,translation:question.translation,vocabulary:question.vocabulary,grammarPoint:question.grammar_point});
-  } catch(error) { return NextResponse.json({error:error instanceof Error?error.message:"無法儲存答案，請稍後再試。"},{status:400}); }
-}
+import{NextResponse}from"next/server";
+import{attemptRequestSchema}from"@/lib/ai/schema";
+import{createSupabaseServerClient}from"@/lib/supabase/server";
+import{normalizeSkill}from"@/lib/toeic/mastery/skills";
+import{updateSkillMastery}from"@/lib/toeic/mastery/update";
+export async function POST(request:Request){try{const input=attemptRequestSchema.parse(await request.json());const supabase=await createSupabaseServerClient();if(!supabase)return NextResponse.json({error:"尚未設定 Supabase。"},{status:503});const{data:{user}}=await supabase.auth.getUser();if(!user)return NextResponse.json({error:"登入狀態已失效，請重新登入。"},{status:401});const{data:question,error}=await supabase.from("questions").select("*").eq("id",input.questionId).eq("user_id",user.id).single();if(error||!question)return NextResponse.json({error:"找不到這道題目。"},{status:404});const isCorrect=input.selectedAnswer===question.correct_answer,skillId=normalizeSkill(question.part,question.grammar_point,question.question_type);const{data:attempt,error:attemptError}=await supabase.from("attempts").insert({user_id:user.id,question_id:question.id,session_id:input.sessionId??null,selected_answer:input.selectedAnswer,correct_answer:question.correct_answer,is_correct:isCorrect,part:question.part,grammar_point:skillId,topic:question.topic,difficulty:question.difficulty}).select("id").single();if(attemptError)throw new Error(`儲存作答失敗：${attemptError.message}`);const{data:wrong}=await supabase.from("wrong_answers").select("first_attempt_id,wrong_count,retry_count").eq("user_id",user.id).eq("question_id",question.id).maybeSingle();if(!isCorrect){const{error:wrongError}=await supabase.from("wrong_answers").upsert({user_id:user.id,question_id:question.id,first_attempt_id:wrong?.first_attempt_id??attempt.id,wrong_count:(wrong?.wrong_count??0)+1,retry_count:wrong?(wrong.retry_count??0)+1:0,resolved:false,last_wrong_at:new Date().toISOString(),next_review_at:new Date(Date.now()+86400000).toISOString()},{onConflict:"user_id,question_id"});if(wrongError)throw new Error(`儲存錯題失敗：${wrongError.message}`);}else if(wrong){const{error:retryError}=await supabase.from("wrong_answers").update({retry_count:(wrong.retry_count??0)+1}).eq("user_id",user.id).eq("question_id",question.id);if(retryError)throw new Error(`更新錯題複習次數失敗：${retryError.message}`);}const mastery=await updateSkillMastery(supabase,user.id,skillId,isCorrect);return NextResponse.json({isCorrect,correctAnswer:question.correct_answer,explanation:question.explanation,translation:question.translation,vocabulary:question.vocabulary,grammarPoint:skillId,transcript:question.transcript,mastery});}catch(error){return NextResponse.json({error:error instanceof Error?error.message:"無法儲存答案，請稍後再試。"},{status:400});}}

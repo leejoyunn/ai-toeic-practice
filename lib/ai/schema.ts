@@ -107,4 +107,4 @@ export const generationRequestSchema = z.object({
   passageMode: z.enum(["single", "double", "triple"]).optional(),
 });
 
-export const attemptRequestSchema = z.object({ questionId: z.string().uuid(), selectedAnswer: z.enum(["A", "B", "C", "D"]) });
+export const attemptRequestSchema = z.object({ questionId: z.string().uuid(), selectedAnswer: z.enum(["A", "B", "C", "D"]), sessionId:z.string().uuid().optional() });

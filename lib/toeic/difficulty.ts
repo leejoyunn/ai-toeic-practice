@@ -1,6 +1,7 @@
 import type { Difficulty, ReadingPart } from "@/types/toeic";
+import{masteryDifficulty,type MasteryLevel}from"@/lib/toeic/mastery/config";
 
-export interface DifficultyContext { currentEstimatedLevel:number; targetScore:number; recentAccuracy:number|null; weakSkillAccuracy:number|null; requested?:Difficulty; }
+export interface DifficultyContext { currentEstimatedLevel:number; targetScore:number; recentAccuracy:number|null; weakSkillAccuracy:number|null; masteryLevel?:MasteryLevel;consecutiveCorrect?:number;consecutiveWrong?:number;requested?:Difficulty; }
 export interface DifficultyRecommendation { difficulty:Difficulty; workingLevel:number; reason:string; focus:string[]; }
 
 export function recommendDifficulty(context: DifficultyContext): DifficultyRecommendation {
@@ -9,7 +10,7 @@ export function recommendDifficulty(context: DifficultyContext): DifficultyRecom
   if (accuracy < 0.45) workingLevel = Math.max(300, context.currentEstimatedLevel - 40);
   else if (accuracy >= 0.82) workingLevel = Math.min(context.targetScore, context.currentEstimatedLevel + 90);
   const calculated: Difficulty = workingLevel < 470 ? "easy" : workingLevel < 580 ? "medium" : "hard";
-  const difficulty = context.requested && !(accuracy < 0.45 && context.requested === "hard") ? context.requested : calculated;
+  const difficulty=context.masteryLevel?masteryDifficulty({currentEstimatedLevel:context.currentEstimatedLevel,targetScore:context.targetScore,masteryLevel:context.masteryLevel,recentAccuracy:accuracy*100,consecutiveCorrect:context.consecutiveCorrect??0,consecutiveWrong:context.consecutiveWrong??0,requested:context.requested}):context.requested&&!(accuracy<.45&&context.requested==="hard")?context.requested:calculated;
   return { difficulty, workingLevel, reason: accuracy < 0.45 ? "近期基礎考點仍不穩，先使用短句與清楚線索。" : accuracy >= 0.82 ? "近期表現穩定，逐步增加干擾選項與上下文。" : "維持可理解、略有挑戰的題目。", focus:["TOEIC 高頻基礎單字","詞性與基本時態","清楚的上下文線索"] };
 }
 

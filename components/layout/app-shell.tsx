@@ -5,7 +5,7 @@ import type { AuthUser } from "@/types/user";
 const nav = [
   { key:"home", label:"首頁", href:"/", icon:Home },
   { key:"practice", label:"練習", href:"/practice", icon:Layers3 },
-  { key:"mistakes", label:"錯題", href:"/mistakes", icon:BookMarked },
+  { key:"mistakes", label:"錯題", href:"/wrong-answers", icon:BookMarked },
   { key:"stats", label:"統計", href:"/stats", icon:BarChart3 },
   { key:"profile", label:"我的", href:"/profile", icon:CircleUserRound },
 ] as const;
