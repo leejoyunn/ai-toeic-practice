@@ -1,1 +1,1 @@
-export { default } from "../practice/page";
+import{redirect}from"next/navigation";export default function StatsRedirect(){redirect("/statistics")}

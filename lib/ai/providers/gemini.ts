@@ -41,6 +41,7 @@ function buildPrompt(input: GenerateQuestionsInput, retryNote = "") {
 學習者目前估計程度：${input.currentEstimatedLevel}。目標分數：${input.targetScore}。本批難度：${input.difficulty}。
 Part 規格：${partGuidance(input.part)}
 弱項參考：${input.weakSkills.join("、") || "基礎文法與高頻字彙"}
+近期尚未熟悉單字：${input.targetVocabulary?.join("、")||"無"}。若語意與 TOEIC 情境自然，可在整批少量使用；不可硬塞，也不可每題重複同一字。
 最近已用情境（本批盡量避開）：${input.recentScenarios.join("、") || "無"}
 最近字彙領域（本批輪替）：${input.recentVocabularyDomains.join("、") || "無"}
 最近句型（本批不得只換主詞重做）：${input.recentSentencePatterns.join("、") || "無"}
