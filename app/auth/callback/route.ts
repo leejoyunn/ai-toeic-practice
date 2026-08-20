@@ -17,13 +17,10 @@ export async function GET(request: NextRequest) {
     name.endsWith("-code-verifier"),
   );
 
-  console.info("OAuth callback diagnostic", {
+  if(process.env.NODE_ENV!=="production")console.info("OAuth callback diagnostic", {
     callback_code_received: Boolean(code),
     flow_id_received: Boolean(flowId),
     verifier_cookie_found: verifierCookieFound,
-    incoming_supabase_cookie_names: incomingCookieNames.filter((name) =>
-      name.startsWith("sb-"),
-    ),
   });
 
   if (!code) {
@@ -38,9 +35,8 @@ export async function GET(request: NextRequest) {
     sessionCookieWritten ||= cookies.some(
       ({ name }) => !name.endsWith("-code-verifier"),
     );
-    console.info("OAuth response cookie diagnostic", {
+    if(process.env.NODE_ENV!=="production")console.info("OAuth response cookie diagnostic", {
       session_cookie_written: sessionCookieWritten,
-      cookies,
     });
   });
   const { error } = await supabase.auth.exchangeCodeForSession(
@@ -65,7 +61,7 @@ export async function GET(request: NextRequest) {
     data: { user },
     error: getUserError,
   } = await supabase.auth.getUser();
-  console.info("OAuth session diagnostic", {
+  if(process.env.NODE_ENV!=="production")console.info("OAuth session diagnostic", {
     exchange_success: true,
     session_cookie_written: sessionCookieWritten,
     server_user_found: Boolean(user) && !getUserError,

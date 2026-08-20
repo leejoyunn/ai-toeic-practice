@@ -8,6 +8,7 @@ import { useTts } from "@/features/listening/use-tts";
 import { TtsVolumeControl } from "@/features/listening/tts-volume-control";
 import { buildPart2TtsSegments } from "@/lib/tts/toeic-sequences";
 import type { QuestionOption, VocabularyEntry } from "@/types/toeic";
+import { userMessage } from "@/lib/errors/user-message";
 
 export interface RemediationQuestion {
   id: string; part: number; question: string; options: QuestionOption[]; difficulty: string;
@@ -38,7 +39,7 @@ export function RemediationPractice({ sessionId, questions }: { sessionId: strin
       body: JSON.stringify({ questionId: current.id, selectedAnswer: id, sessionId }),
     });
     const payload = await response.json() as Result & { error?: string };
-    if (!response.ok) { setSelected(null); setError(payload.error ?? "無法儲存作答。"); return; }
+    if (!response.ok) { setSelected(null); setError(userMessage(payload.error,"無法儲存作答。")); return; }
     setResult(payload);
   }
   function next() { setIndex((value) => value + 1); setSelected(null); setResult(null); setError(""); }

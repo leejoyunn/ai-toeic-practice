@@ -1,15 +1,48 @@
-# TOEIC Path — AI 多益英文練習系統
+# TOEIC PATH
 
-為 TOEIC 約 400 分、第一階段目標 550 分的學習者設計。Phase 1 已完成 Mobile First 首頁、導覽、Supabase／Google OAuth 與 PWA 基礎；Phase 2 已完成 AI 即時生成 Reading Part 5–7、作答與白話詳解。
+TOEIC PATH 是為英文程度約 TOEIC 400 分、第一階段目標 550 分的學習者設計的個人學習系統。介面以繁體中文提供白話解析，題目維持英文，並依作答、錯題、熟練度與單字狀態循序調整。目前 Phase 1–8 已完成，是可進行正式部署驗證的第一版。
 
-## 技術架構
+## 核心功能
 
-- Next.js 相容的 Vinext、React 19、TypeScript、Tailwind CSS 4
-- Supabase Auth + PostgreSQL + Row Level Security
-- PWA manifest；後續以瀏覽器 Web Speech API 實作免費 TTS
-- 可替換的 `AiProvider` 介面；API Key 僅供未來 Server route 使用
+- Listening Part 1–4：照片描述、應答、對話與獨白；Web Speech API、多講者 voice mapping、暫停／繼續／重播與共用音量偏好。
+- Reading Part 5–7：句子填空、篇章填空、Single／Double／Triple Passage。
+- AI 原創題目：server-side Gemini `AiProvider` abstraction，不以固定題庫作為最終來源。
+- 400 → 550：Easy、Medium、Hard 循序調整。
+- Phase 4 防重複：最近 500 題、`question_hash`、fingerprint、Jaccard、bigram、trigram、Levenshtein、recency weighting、情境／考點輪替與 regenerate。
+- Wrong Answer Book、原題重做、同考點新題、mastery tracking。
+- Statistics、弱項分析與 Recommended Practice。
+- Vocabulary 去重、熟悉度、spaced review 與 `next_review_at`。
+- Mini Mock 20／50／100（Mixed、Reading-only、Listening-only）與 Full Mock 200 分批準備；timer persistence、未作答提醒、abandon、Result、Answer Review、History。
+- PWA manifest、正式 icon、standalone 顯示與基本離線提示。
 
-## 本機安裝與啟動
+## Tech Stack 與 Architecture
+
+- Vinext `1.0.0-beta.2`（Next.js App Router 相容 API）、React 19、TypeScript、Vite 8、Tailwind CSS 4
+- Supabase Auth、PostgreSQL、Row Level Security
+- Gemini API、Zod、Web Speech API
+
+主要目錄：`app/`（頁面與 routes）、`features/`（功能 UI）、`lib/ai/`（AI provider/schema）、`lib/similarity/`（防重複）、`lib/toeic/`（學習 domain）、`lib/supabase/`（SSR/auth client）、`supabase/migrations/`（資料庫）、`public/listening/`（Part 1 素材）。
+
+## Environment Variables
+
+複製 `.env.example` 為 `.env.local`：
+
+```dotenv
+NEXT_PUBLIC_SUPABASE_URL=
+NEXT_PUBLIC_SUPABASE_ANON_KEY=
+AI_PROVIDER=gemini
+AI_API_KEY=
+GEMINI_API_KEY=
+GEMINI_MODEL=gemini-3.5-flash-lite
+```
+
+`NEXT_PUBLIC_*` 只允許 Supabase 公開 URL 與 anon key；安全性由 RLS 控制。Gemini key、service role、OAuth Client Secret 與 token 禁止加上 `NEXT_PUBLIC_`，也不得提交 Git。`AI_API_KEY` 是 provider abstraction 的相容 fallback，Gemini 建議使用 `GEMINI_API_KEY`。
+
+沒有 Gemini key 時，首頁、登入、Profile、Statistics、Vocabulary 與 History 仍可使用；AI generation 會顯示友善設定提示，不會讓整站啟動失敗。
+
+## Local Setup
+
+需求：Node.js 22.13 或更新版本。
 
 ```bash
 npm install
@@ -17,79 +50,65 @@ copy .env.example .env.local
 npm run dev
 ```
 
-打開開發伺服器顯示的 Local URL。正式檢查使用 `npm run build`。
+開啟 `http://localhost:3000`。Production checks：
 
-## 環境變數
-
-`.env.local` 需要：
-
-```dotenv
-NEXT_PUBLIC_SUPABASE_URL=
-NEXT_PUBLIC_SUPABASE_ANON_KEY=
-AI_PROVIDER=
-AI_API_KEY=
-GEMINI_API_KEY=
-GEMINI_MODEL=
+```bash
+npm run build
+npx tsc --noEmit
+npm run lint
+git diff --check
 ```
 
-`NEXT_PUBLIC_*` 僅能放 Supabase 公開 URL 與 anon key；不得放 service role key。Phase 2 建議設定 `AI_PROVIDER=gemini`、`GEMINI_API_KEY`，模型可用 `GEMINI_MODEL=gemini-2.5-flash-lite`。`AI_API_KEY` 是其他 Provider 的通用保留欄位。所有 AI Key 只允許 Server 讀取。
+## Supabase Migration
 
-## Gemini 免費 Provider
+建立 Supabase project 後，依檔名順序在 SQL Editor 執行，不可只跑最後一支：
 
-1. 登入 [Google AI Studio](https://aistudio.google.com/)。
-2. 到 API Keys 頁建立新的 Gemini API Key；新帳號可使用具有限額的 Free Tier。
-3. 將 Key 填入本機 `.env.local` 的 `GEMINI_API_KEY`，不要加上 `NEXT_PUBLIC_`。
-4. 設定 `AI_PROVIDER=gemini` 與 `GEMINI_MODEL=gemini-2.5-flash-lite`。
-5. 免費額度與可用模型可能調整，請以 AI Studio 的 Usage／Rate limits 為準。
+1. `202608150001_initial_schema.sql`
+2. `202608162220_fix_authenticated_table_grants.sql`
+3. `202608180001_phase6_vocabulary_item_rpc.sql`
+4. `202608180002_phase7_mock_tests.sql`
+5. `202608180003_phase7_submit_processing_stage.sql`
 
-## Supabase 設定
+`202608150000_cleanup_partial_schema.sql` 只供舊版 initial migration 曾中途失敗的 project 使用；新 project 不需執行。Migration 會建立必要 GRANT、RLS、ownership constraint 與 index。一般 App 不使用 service role 繞過 RLS。
 
-1. 建立 Supabase project。
-2. 在 SQL Editor 執行 `supabase/migrations/202608150001_initial_schema.sql`。
-3. 到 Project Settings → API，將 Project URL 與 anon/public key 寫進 `.env.local`。
-4. 到 Authentication → URL Configuration：Site URL 設成本機或正式網址；Redirect URLs 加入 `http://localhost:3000/auth/callback`（若開發伺服器使用不同 port，請同步修改）。
-5. SQL 已啟用 RLS；使用者資料表只允許目前登入者讀寫。共用圖片與單字只允許登入者讀取。
+## Google OAuth Setup
 
-### 初次 migration 曾中途失敗
+1. Google Cloud Console 建立 Web OAuth Client。
+2. Google Authorized redirect URI 設為 Supabase Provider 顯示的 `https://<project-ref>.supabase.co/auth/v1/callback`。
+3. Client ID／Secret 只填入 Supabase Dashboard。
+4. 本機 Supabase Site URL 設為 `http://localhost:3000`。
+5. Redirect allow list 加入 `http://localhost:3000/auth/callback`；production 也加入對應 HTTPS callback。
+6. App callback 會以 PKCE `exchangeCodeForSession` 寫入 HTTP session cookie。
 
-如果舊版 initial migration 曾執行到一半才報錯，請依序在 SQL Editor 執行：
+## AI Provider
 
-1. `supabase/migrations/202608150000_cleanup_partial_schema.sql`
-2. `supabase/migrations/202608150001_initial_schema.sql`
+到 [Google AI Studio](https://aistudio.google.com/) 建立 key，設定 `AI_PROVIDER=gemini`、`GEMINI_API_KEY` 與可替換的 `GEMINI_MODEL`。模型與免費額度可能變動，請以 Google 官方資訊為準。AI 輸出會經 Zod、品質與 Phase 4 similarity validation；quota、timeout 或多輪驗證失敗時可安全重試。
 
-Cleanup 只會移除本專案明確命名的 `public` tables、types、function，以及本專案加在 `auth.users` 上的 `on_auth_user_created` trigger；不會刪除 `auth`、`storage`、Supabase 系統 schema、使用者帳號或 `pgcrypto` extension。修正版 initial migration 使用 transaction，未來若任一步驟失敗會整批回滾，避免再次留下半套 schema。
+## PWA / Offline
 
-## Google OAuth 設定
+- Manifest：`/manifest.webmanifest`
+- Display：`standalone`
+- Icons：SVG、192×192、512×512、Apple touch icon
+- Android／Chrome：使用瀏覽器「安裝應用程式」；iOS：Safari → 分享 →「加入主畫面」。
 
-1. 到 Google Cloud Console 建立 OAuth 2.0 Client（Web application）。
-2. Google 的 Authorized redirect URI 請填 Supabase Dashboard → Authentication → Providers → Google 顯示的 callback URL，格式通常為 `https://<project-ref>.supabase.co/auth/v1/callback`。
-3. 將 Google Client ID 與 Client Secret 填入 Supabase 的 Google Provider 設定並啟用。
-4. 確認 Supabase Redirect URLs 包含網站的 `/auth/callback`。
-5. 重新啟動本機伺服器，至 `/login` 測試登入。
+目前沒有 service worker。這是 production-safety 選擇：OAuth callback、authenticated API、AI responses、Supabase data 與 Mock submit 不應被錯誤快取。離線時會顯示提示，但不宣稱支援完整 offline learning。
 
-## Phase 1 測試清單
+## Deployment
 
-- `/`：首頁與 Listening／Reading 分流，調整到 375、390、430、768px 檢查沒有橫向捲動。
-- 手機寬度：底部導覽可點；桌面寬度：左側導覽可點。
-- `/login`：未設環境變數時顯示友善提示；完成設定後可用 Google 登入。
-- `/profile`：登入後顯示帳號與學習階段，另一裝置登入同帳號可辨識同一 `user_id`。
-- `/practice`：選擇 Reading Part 5、6、7。
-- `/practice/part-5`：生成句子填空並逐題作答。
-- `/practice/part-6`：確認每題包含完整短文與上下文題。
-- `/practice/part-7`：確認每題包含原創文章與閱讀理解題。
-- 作答後確認一定顯示正確答案、中文解析、單字、考點與完整翻譯。
-- 瀏覽器 Application 面板：可讀取 PWA manifest，display 為 standalone。
+專案實際使用 Vinext，不是標準 Next.js CLI。建議選擇 Vinext／Cloudflare runtime 相容平台，先在 staging 設定 env、執行 production build，並驗證 RSC、route handlers、cookies、Supabase HTTPS、PWA assets 與 OAuth callback。Repository 不宣稱可零設定部署 Vercel，也不會自動建立付費資源；選定平台後依當時 Vinext 官方 adapter 文件設定。
 
-## 後續階段
+## Security Notes
 
-- Phase 2（已完成）：Reading Part 5–7、AI 生成 API、Zod 驗證、作答詳解、基礎防重複與 400→550 難度策略。
-- Phase 3：Listening Part 1–4、Web Speech API、多 voice 與逐字稿。
-- Phase 4：question hash、相似度、最近 500 題冷卻、情境與考點輪替。
-- Phase 5–7：錯題與 mastery、統計推薦及單字、Mini／Full Mock Test。
-- Phase 8：完整 UI／PWA 圖示與離線策略、錯誤處理、正式部署。
+- AI key 只由 server code 讀取；browser bundle 只含 Supabase URL／anon key。
+- Route Handlers 使用 `auth.getUser()`，使用者資料由 RLS 與 `user_id` 隔離。
+- production 不輸出 OAuth code、token、cookie value、key 或非必要診斷。
+- `.env*`、build/cache、logs、OS/editor temp 已忽略，`.env.example` 明確保留。
+- 不快取 OAuth、authenticated API、AI response 或 Mock submission。
 
-防重複所需的 `question_hash`、`grammar_point`、`scenario`、`vocabulary_domain`、`sentence_pattern` 及索引已在 Phase 1 schema 預留。正式資料以 Supabase 為準，瀏覽器儲存只會用於 UI 偏好與未送出暫存。
+## Limitations / Content Note
 
-## Part 1 圖片素材
+TTS 音質與最大音量依瀏覽器／作業系統；Gemini free tier 有 quota 與模型可用性限制；Estimated Score 不代表 ETS 官方成績；Full Mock 是練習 shell；第一版只有基本離線提示。
 
-Part 1 使用 `public/listening/` 內的本機圖片，不會在練習時向外部圖片網站載入。每張圖片的來源頁與授權名稱保存在 `lib/listening/images.ts` metadata；素材分別依 [Unsplash License](https://unsplash.com/license) 與 [Pexels License](https://www.pexels.com/license/) 使用。請勿在未更新 metadata 與來源資訊的情況下替換圖片檔案。
+Part 1 圖片位於 `public/listening/`，來源與 license metadata 位於 `lib/listening/images.ts`，依 [Unsplash License](https://unsplash.com/license) 與 [Pexels License](https://www.pexels.com/license/) 使用。
+
+TOEIC 是 Educational Testing Service（ETS）的註冊商標。TOEIC PATH 是獨立個人學習系統，與 ETS 無官方隸屬或背書關係。題目為 AI 原創 TOEIC-style practice，不複製 ETS 官方題庫。

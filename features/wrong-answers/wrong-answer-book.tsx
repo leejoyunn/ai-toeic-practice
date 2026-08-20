@@ -7,6 +7,7 @@ import { useTts } from "@/features/listening/use-tts";
 import { TtsVolumeControl } from "@/features/listening/tts-volume-control";
 import { buildPart2TtsSegments } from "@/lib/tts/toeic-sequences";
 import type { Difficulty, QuestionOption, VocabularyEntry } from "@/types/toeic";
+import { userMessage } from "@/lib/errors/user-message";
 
 interface StoredQuestion {
   id: string; part: number; question: string; question_type: string; options: QuestionOption[];
@@ -20,12 +21,12 @@ export interface WrongAnswerItem {
 }
 type Filter = "all" | "recent" | "unfamiliar" | "familiar" | `part-${number}`;
 
-export function WrongAnswerBook({ initialItems, initialError }: { initialItems: WrongAnswerItem[]; initialError: string }) {
+export function WrongAnswerBook({ initialItems, initialError, referenceNow }: { initialItems: WrongAnswerItem[]; initialError: string; referenceNow:string }) {
   const [items, setItems] = useState(initialItems);
   const [filter, setFilter] = useState<Filter>("all");
   const [open, setOpen] = useState<string | null>(null);
   const [error, setError] = useState(initialError);
-  const [recentCutoff] = useState(() => Date.now() - 7 * 86_400_000);
+  const [recentCutoff] = useState(() => new Date(referenceNow).getTime() - 7 * 86_400_000);
   const shown = useMemo(() => items.filter((item) =>
     filter === "all" ||
     (filter === "recent" && new Date(item.last_wrong_at).getTime() >= recentCutoff) ||
@@ -40,7 +41,7 @@ export function WrongAnswerBook({ initialItems, initialError }: { initialItems: 
       method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ resolved: !item.resolved }),
     });
     const payload = await response.json() as { error?: string };
-    if (!response.ok) { setError(payload.error ?? "無法更新錯題狀態。"); return; }
+    if (!response.ok) { setError(userMessage(payload.error,"無法更新錯題狀態。")); return; }
     setItems((all) => all.map((entry) => entry.question_id === item.question_id ? { ...entry, resolved: !entry.resolved } : entry));
   }
 
@@ -49,7 +50,7 @@ export function WrongAnswerBook({ initialItems, initialError }: { initialItems: 
     {error && <div className="practice-error">{error}</div>}<div className="wrong-list">
       {shown.map((item) => <article className="wrong-card" key={item.question_id}>
         <header><div><span className="status-chip-inline">Part {item.question.part}</span><span className={`mastery-chip ${item.resolved ? "resolved" : ""}`}>{item.resolved ? "已熟悉" : "尚未熟悉"}</span></div><button className="icon-button" aria-label="展開錯題" onClick={() => setOpen(open === item.question_id ? null : item.question_id)}><ChevronDown /></button></header>
-        <h2>{item.question.question}</h2><div className="wrong-meta"><span>當時選擇 {item.selectedAnswer}</span><span>錯誤 {item.wrong_count} 次</span><span>{item.question.grammar_point ?? item.question.question_type}</span><span>{item.question.difficulty}</span><span>{new Date(item.answeredAt).toLocaleDateString("zh-TW")}</span></div>
+        <h2>{item.question.question}</h2><div className="wrong-meta"><span>當時選擇 {item.selectedAnswer}</span><span>錯誤 {item.wrong_count} 次</span><span>{item.question.grammar_point ?? item.question.question_type}</span><span>{difficultyLabel(item.question.difficulty)}</span><span>{new Date(item.answeredAt).toLocaleDateString("zh-TW")}</span></div>
         {open === item.question_id && <WrongDetail item={item} onMark={() => mark(item)} onError={setError} />}
       </article>)}
       {!shown.length && <div className="empty-wrong"><Check /><h2>目前沒有符合篩選的錯題</h2><p>繼續練習，錯題會在這裡集中複習。</p></div>}
@@ -80,7 +81,7 @@ function WrongDetail({ item, onMark, onError }: { item: WrongAnswerItem; onMark:
     const response = await fetch("/api/remediation/generate", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ originQuestionId: q.id }) });
     const payload = await response.json() as { url?: string; error?: string };
     setLoading(false);
-    if (!response.ok || !payload.url) { onError(payload.error ?? "無法生成同考點新題。"); return; }
+    if (!response.ok || !payload.url) { onError(userMessage(payload.error,"無法生成同考點新題。")); return; }
     window.location.assign(payload.url);
   }
   function playAudio() {
@@ -106,6 +107,7 @@ function WrongDetail({ item, onMark, onError }: { item: WrongAnswerItem; onMark:
   </div>;
 }
 
+function difficultyLabel(value:Difficulty){return value==="easy"?"簡單":value==="medium"?"中等":"困難"}
 function filterLabel(value: Filter) { return value === "all" ? "全部" : value === "recent" ? "最近錯題" : value === "unfamiliar" ? "尚未熟悉" : value === "familiar" ? "已熟悉" : `Part ${value.slice(5)}`; }
 function masteryText(value: string) { return value === "mastered" ? "已掌握" : value === "familiar" ? "熟悉" : value === "improving" ? "進步中" : "學習中"; }
 function isRecord(value: unknown): value is Record<string, unknown> { return typeof value === "object" && value !== null && !Array.isArray(value); }

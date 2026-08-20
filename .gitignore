@@ -31,6 +31,14 @@ yarn-error.log*
 
 # env files (can opt-in for committing if needed)
 .env*
+!.env.example
+
+# OS / editor temporary files
+Thumbs.db
+*.swp
+*.swo
+*.tmp
+*.log
 
 # vercel
 .vercel

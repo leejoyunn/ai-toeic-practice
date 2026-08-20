@@ -5,7 +5,7 @@ import { getSupabaseEnv } from "@/lib/supabase/env";
 export function GoogleSignInButton({disabled}:{disabled:boolean}){
   async function signIn(){
     if(disabled)return;
-    console.info("OAuth start diagnostic", { oauth_start_called: true });
+    if(process.env.NODE_ENV!=="production")console.info("OAuth start diagnostic", { oauth_start_called: true });
     const {url,anonKey}=getSupabaseEnv();
     const supabase=createBrowserClient(url,anonKey);
     const { data, error } = await supabase.auth.signInWithOAuth({
@@ -19,7 +19,7 @@ export function GoogleSignInButton({disabled}:{disabled:boolean}){
     const allowedOAuthHost = Boolean(
       oauthHost === "accounts.google.com" || oauthHost?.endsWith(".supabase.co"),
     );
-    console.info("OAuth URL diagnostic", {
+    if(process.env.NODE_ENV!=="production")console.info("OAuth URL diagnostic", {
       oauth_error_code: error?.code ?? null,
       oauth_error_message: error?.message ?? null,
       oauth_url_created: Boolean(data.url),
@@ -29,7 +29,7 @@ export function GoogleSignInButton({disabled}:{disabled:boolean}){
 
     if (error || !data.url || !allowedOAuthHost) return;
 
-    console.info("OAuth redirect diagnostic", {
+    if(process.env.NODE_ENV!=="production")console.info("OAuth redirect diagnostic", {
       window_location_assign_executed: true,
     });
     window.location.assign(data.url);

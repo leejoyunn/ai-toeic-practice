@@ -4,7 +4,7 @@ import { createSupabaseServerClient } from "./server";
 export async function getCurrentUser(): Promise<AuthUser | null> {
   const supabase = await createSupabaseServerClient();
   if (!supabase) {
-    console.info("Server auth diagnostic", { authenticated: false, reason: "env_missing" });
+    if(process.env.NODE_ENV!=="production")console.info("Server auth diagnostic", { authenticated: false, reason: "env_missing" });
     return null;
   }
 
@@ -12,7 +12,7 @@ export async function getCurrentUser(): Promise<AuthUser | null> {
     data: { user },
     error,
   } = await supabase.auth.getUser();
-  console.info("Server auth diagnostic", {
+  if(process.env.NODE_ENV!=="production")console.info("Server auth diagnostic", {
     authenticated: Boolean(user) && !error,
     get_user_error_code: error?.code ?? null,
   });

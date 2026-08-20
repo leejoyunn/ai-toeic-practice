@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="TOEIC PATH">
+  <rect width="512" height="512" rx="112" fill="#173f3a"/>
+  <path d="M132 128h248v74h-82v190h-84V202h-82z" fill="#f5f3ec"/>
+  <path d="M118 344c57 0 87-18 117-49 32-33 68-53 159-53v70c-61 0-82 12-108 39-40 41-84 63-168 63z" fill="#e6b987"/>
+</svg>
