@@ -36,6 +36,7 @@ const RESPONSE_SCHEMA = {
 
 function buildPrompt(input: GenerateQuestionsInput, retryNote = "") {
   const passageMode = input.passageMode ?? (input.difficulty === "hard" ? "triple" : input.difficulty === "medium" ? "double" : "single");
+  const part7TypeCount=Math.min(3,input.count);
   return `你是專門協助繁體中文初學者的 TOEIC Reading 教材編寫老師。請生成 ${input.count} 題完全原創、非官方考題的 Part ${input.part} 四選一練習題。
 
 學習者目前估計程度：${input.currentEstimatedLevel}。目標分數：${input.targetScore}。本批難度：${input.difficulty}。
@@ -59,7 +60,7 @@ Part 規格：${partGuidance(input.part)}
 4. vocabulary 至少列 1 個重要字，包含中文與詞性。
 5. Part 5 的 passage、passageType 必須為 null；Part 6/7 必須有完整 passage 與 passageType。
    Part 6：本批 ${input.count} 題必須共用同一篇完整 passage 與同一 passageGroupId，passage 依序包含 ${Array.from({length:input.count},(_,index)=>`(${index+1}) ____`).join("、")}；每題 blankNumber 各自對應一個空格。question 不可重複 passage 或包含選項，只能是簡短提示。documents 填一份與 passage 相同內容的文件。questionType 要混合 vocabulary、grammar、sentence_insertion、context。每一題都必須重複填入同一篇文章的完整繁體中文 translation，不得只有第一題有翻譯、其餘留空。
-   Part 7：本批題目必須共用同一 passageGroupId 與同一組 documents；本次模式是 ${passageMode} passage，documents 必須真的包含 ${passageMode==="single"?1:passageMode==="double"?2:3} 份類型不同但資訊互相關聯的完整文件，passageType 填 ${passageMode}_passage，passage 填所有文件的可讀合併文字。不可把單篇任意切段假裝多篇。questionType 從 detail、main_purpose、paraphrase、inference、vocabulary_in_context、cross_document 選擇；Single 不可用 cross_document。Easy 以 detail 為主但至少一題 paraphrase；Medium 增加 paraphrase/inference；Hard 與多文件必須包含 inference/cross_document。
+   Part 7：本批題目必須共用同一 passageGroupId 與同一組 documents；本次模式是 ${passageMode} passage，documents 必須真的包含 ${passageMode==="single"?1:passageMode==="double"?2:3} 份類型不同但資訊互相關聯的完整文件，passageType 填 ${passageMode}_passage，passage 填所有文件的可讀合併文字。不可把單篇任意切段假裝多篇。questionType 從 detail、main_purpose、paraphrase、inference、vocabulary_in_context、cross_document 選擇；Single 不可用 cross_document。本批共 ${input.count} 題，至少必須使用 ${part7TypeCount} 種不同 questionType，不可全部相同，也不可只使用 ${Math.max(1,part7TypeCount-1)} 種。Easy 以 detail 為主但至少一題 paraphrase；Medium 增加 paraphrase/inference；Hard 與多文件必須包含 inference/cross_document。
 6. 每題都要有 grammarPoint、topic、scenario、vocabularyDomain、sentencePattern、keywords、difficulty、targetScore。
 7. 同一批題目必須輪替情境、核心單字、主詞、句型與考點；優先採用「優先情境／優先考點」，降低近期過度集中項目的權重；不得產生只有替換人名或名詞的近似題。
 8. 不得引用、改寫或聲稱來自 ETS／TOEIC 官方考題。
@@ -77,15 +78,17 @@ export class GeminiProvider implements AiProvider {
     const configuredModel = process.env.GEMINI_MODEL?.trim() || DEFAULT_GEMINI_MODEL;
     const models = [configuredModel, ...GEMINI_MODEL_FALLBACKS.filter((model) => model !== configuredModel)];
     let lastError: unknown;
+    let lastValidationMessage = "";
     let unavailableModels = 0;
     for (const model of models) {
+      let modelUnavailable=false;
       for (let attempt = 0; attempt < 3; attempt += 1) {
         try {
           const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`, {
             method: "POST",
             headers: { "Content-Type": "application/json", "x-goog-api-key": apiKey },
             body: JSON.stringify({
-              contents: [{ parts: [{ text: buildPrompt(input, attempt ? "前次輸出未通過格式或品質驗證，請逐欄檢查後重新生成。" : "") }] }],
+              contents: [{ parts: [{ text: buildPrompt(input, attempt ? `前次輸出未通過格式或品質驗證。實際原因：${lastValidationMessage||"未知格式錯誤"}。請針對這個原因修正整批後重新生成。` : "") }] }],
               generationConfig: { responseMimeType: "application/json" },
             }),
             signal: AbortSignal.timeout(45_000),
@@ -96,6 +99,7 @@ export class GeminiProvider implements AiProvider {
             if (response.status === 429) throw new AiProviderUnavailableError("Gemini 免費額度目前忙碌，請稍後再試。");
             if (isModelUnavailable(response.status, detail)) {
               unavailableModels += 1;
+              modelUnavailable=true;
               lastError = new Error(`${MODEL_UNAVAILABLE_MESSAGE}（${model}）`);
               break;
             }
@@ -113,8 +117,10 @@ export class GeminiProvider implements AiProvider {
         } catch (error) {
           if (error instanceof AiProviderUnavailableError) throw error;
           lastError = error;
+          lastValidationMessage=error instanceof Error?error.message:"未知格式錯誤";
         }
       }
+      if(!modelUnavailable)throw new AiProviderUnavailableError(lastError instanceof Error ? `AI 回傳格式未通過驗證：${lastError.message}` : undefined);
     }
     if (unavailableModels === models.length) throw new AiProviderUnavailableError(MODEL_UNAVAILABLE_MESSAGE);
     throw new AiProviderUnavailableError(lastError instanceof Error ? `AI 回傳格式未通過驗證：${lastError.message}` : undefined);

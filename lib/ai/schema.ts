@@ -90,7 +90,7 @@ export const generatedBatchSchema = z.object({ questions: z.array(generatedQuest
       if (group.some((question) => question.passage !== first.passage || JSON.stringify(question.documents) !== JSON.stringify(first.documents))) context.addIssue({ code: "custom", message: `Part ${part} 同群組題目必須共用完全相同的文章資料。`, path: ["questions"] });
       const questionTypes = new Set(group.map((question) => question.questionType));
       if (part === 6 && group.length >= 4 && !["vocabulary", "grammar", "sentence_insertion", "context"].every((type) => questionTypes.has(type))) context.addIssue({ code: "custom", message: "Part 6 多題文章必須混合單字、文法、句子插入與上下文題型。", path: ["questions"] });
-      if (part === 7 && questionTypes.size < Math.min(3, group.length)) context.addIssue({ code: "custom", message: "Part 7 同組題目不可全部使用同一種閱讀題型。", path: ["questions"] });
+      if (part === 7 && questionTypes.size < Math.min(3, group.length)) context.addIssue({ code: "custom", message: `Part 7 本組 ${group.length} 題至少需要 ${Math.min(3,group.length)} 種不同閱讀題型。`, path: ["questions"] });
       if (part === 7 && first.difficulty === "easy" && group.length >= 2 && !questionTypes.has("paraphrase")) context.addIssue({ code: "custom", message: "Part 7 Easy 至少要有一題同義改寫。", path: ["questions"] });
       if (part === 7 && first.difficulty !== "easy" && !questionTypes.has("inference")) context.addIssue({ code: "custom", message: "Part 7 Medium／Hard 至少要有一題推論。", path: ["questions"] });
       if (part === 7 && first.documents.length >= 2 && !questionTypes.has("cross_document")) context.addIssue({ code: "custom", message: "Double／Triple Passage 至少要有一題跨文件整合。", path: ["questions"] });

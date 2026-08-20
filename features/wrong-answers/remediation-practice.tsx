@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { ArrowLeft, Check, ChevronRight, Headphones, Pause, Play, SkipBack, Sparkles, X } from "lucide-react";
 import { useTts } from "@/features/listening/use-tts";
+import { TtsVolumeControl } from "@/features/listening/tts-volume-control";
 import { buildPart2TtsSegments } from "@/lib/tts/toeic-sequences";
 import type { QuestionOption, VocabularyEntry } from "@/types/toeic";
 
@@ -61,7 +62,7 @@ export function RemediationPractice({ sessionId, questions }: { sessionId: strin
       {current.part === 1 && image && typeof image.imageUrl === "string" && <Image className="listening-photo" src={image.imageUrl} alt="Part 1 remediation" width={900} height={600} />}
       {documents.map((doc, i) => <article className="passage" key={i}><span>{String(doc.label ?? `Document ${i + 1}`)}</span><p>{String(doc.content ?? "")}</p></article>)}
       {current.passage && <article className="passage"><span>{current.passage_type}</span><p>{current.passage}</p></article>}
-      {current.part <= 4 && <div className="audio-controls" aria-live="polite"><button className="button button-small" onClick={play} disabled={!tts.supported}><Headphones />{tts.status === "playing" ? "播放中…" : "播放題目"}</button><button type="button" onClick={tts.status === "paused" ? tts.resume : tts.pause} disabled={tts.status === "idle"} aria-label={tts.status === "paused" ? "繼續播放" : "暫停"}>{tts.status === "paused" ? <Play /> : <Pause />}</button><button type="button" onClick={play} disabled={!tts.supported} aria-label="重新播放"><SkipBack /></button><span>作答後才會顯示 transcript。</span></div>}
+      {current.part <= 4 && <div className="audio-controls" aria-live="polite"><button className="button button-small" onClick={play} disabled={!tts.supported}><Headphones />{tts.status === "playing" ? "播放中…" : "播放題目"}</button><button type="button" onClick={tts.status === "paused" ? tts.resume : tts.pause} disabled={tts.status === "idle"} aria-label={tts.status === "paused" ? "繼續播放" : "暫停"}>{tts.status === "paused" ? <Play /> : <Pause />}</button><button type="button" onClick={play} disabled={!tts.supported} aria-label="重新播放"><SkipBack /></button><TtsVolumeControl volume={tts.volume} onChange={tts.setVolume}/><span>作答後才會顯示 transcript。</span></div>}
       {tts.error && <div className="practice-error">{tts.error}</div>}
       <h1>{current.part <= 2 ? "請聽音訊並選出最佳答案。" : current.question}</h1>
       <div className="options-list">{current.options.map((option) => {
